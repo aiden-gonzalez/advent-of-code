@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cmath>
 
 /*
     Now you get inside and take the elevator to the gift shop. A clerk asks
@@ -42,28 +43,41 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    int dash_pos;
-    int range_start;
-    int range_end;
+    long invalid_ids_sum = 0;
 
-    int invalid_ids_sum = 0;
-
+    // Open input file
     input_file.open("input.txt");
     if (input_file.is_open()) {
-        while (getline(input_file, line)) {
-            // Read range
-            dash_pos = line.find('-');
-            range_start = std::stoi(line.substr(0, dash_pos + 1));
-            range_end = std::stoi(line.substr(dash_pos + 1, line.length()));
+        // Read input line, separated by delimiter
+        while (getline(input_file, line, ',')) {
+            // Parse number range
+            int dash_pos = line.find('-');
+
+            long range_start = std::stol(line.substr(0, dash_pos));
+            long range_end = std::stol(line.substr(dash_pos + 1, line.length()));
             
             // Iterate through the range
+            for (long i = range_start; i <= range_end; i++) {
+                // Get order of magnitude (how many digits)
+                int digits = std::floor(log10(i)) + 1;
 
-            // For each number (represented as a string), split the number in half.
-            // Now do the two halves equal each other?  Does the first half of the string
-            // equal the second half?
+                // If number is not an even length, skip
+                if (digits % 2 != 0) {
+                    continue;
+                }
+                
+                // Grab the right side of the number by performing modulus down the middle (ex. 123,123 % 1000 = 123)
+                int mod = std::pow(10, digits / 2);
+                long right = i % mod;
 
-            // OR another approach. Can you use modulus or bit shifting to be able to check
-            // for symmetry without having to convert back to a string and split in half?
+                // Compose a symmetric version (ex. 123 * 1000 + 123 = 123,123)
+                long symmetric = right * mod + right;
+
+                // Check if the symmetric version matches the original, then the original was symmetric
+                if (symmetric == i) {
+                    invalid_ids_sum += i;
+                }
+            }
         }
         input_file.close();
     } else {
