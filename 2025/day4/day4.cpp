@@ -51,7 +51,7 @@ int main() {
     std::vector<std::vector<int>> adj_count_grid;
 
     // Open input file
-    input_file.open("input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
