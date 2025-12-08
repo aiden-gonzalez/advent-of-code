@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
 
 /*
     After helping the elves in the kitchen, you jumped into the garbage chute.
