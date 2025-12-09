@@ -108,14 +108,14 @@ std::ostream & operator<<(std::ostream & os, Point const & p) {
 
 class Pair {
     public:
-        Pair (const Point* p1, const Point* p2, double d) {
+        Pair (Point* p1, Point* p2, double d) {
             point_1 = p1;
             point_2 = p2;
             dis = d;
         }
 
-        const Point* point_1;
-        const Point* point_2;
+        Point* point_1;
+        Point* point_2;
         double dis;
 
         // Friend function: stream operator overload
@@ -172,7 +172,7 @@ int main() {
             std::cout << close_pair << '\n';
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
-                //close_pair.point_2->circ_id = close_pair.point_1->circ_id;
+                close_pair.point_2->circ_id = close_pair.point_1->circ_id;
             }
             pairs.pop();
         }
