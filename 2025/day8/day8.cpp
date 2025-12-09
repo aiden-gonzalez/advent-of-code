@@ -174,6 +174,7 @@ int main() {
         int c = 0;
         while (c < connections) {
             Pair close_pair = pairs.top();
+            std::cout << close_pair << '\n';
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
                 // Circuit with more boxes should grow, other circuit should shrink
@@ -181,20 +182,23 @@ int main() {
                     circ_point_counts[close_pair.point_1->circ_id]++;
                     circ_point_counts[close_pair.point_2->circ_id]--;
                     close_pair.point_2->circ_id = close_pair.point_1->circ_id;
+                    std::cout << "Connected! Circuit " << close_pair.point_1->circ_id << " now has " << circ_point_counts[close_pair.point_1->circ_id] << " boxes.\n";
                 } else {
                     circ_point_counts[close_pair.point_2->circ_id]++;
                     circ_point_counts[close_pair.point_1->circ_id]--;
                     close_pair.point_1->circ_id = close_pair.point_2->circ_id;
+                    std::cout << "Connected! Circuit " << close_pair.point_2->circ_id << " now has " << circ_point_counts[close_pair.point_2->circ_id] << " boxes.\n";
                 }
                 c++;
             }
+            std::cout << '\n';
             pairs.pop();
         }
 
         // Sort circuits by number of points (descending)
         std::sort(circ_point_counts.begin(), circ_point_counts.end(), std::greater<int>());
 
-        // Get multiplied size of 3 largest circuits
+        // Multiply together the size of the 3 largest circuits
         long result = 1;
         for (int i = 0; i < 3 && i < circ_point_counts.size(); i++) {
             result = result * circ_point_counts[i];
