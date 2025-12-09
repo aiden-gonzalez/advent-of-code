@@ -171,15 +171,22 @@ int main() {
         }
 
         // Connect the "connections" closest pairs
-        for (int p = 0; p < connections; p++) {
+        int c = 0;
+        while (c < connections) {
             Pair close_pair = pairs.top();
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
-                // Update circuit point counts
-                circ_point_counts[close_pair.point_2->circ_id]--;
-                circ_point_counts[close_pair.point_1->circ_id]++;
-                // Move point 2 to point 1's circuit
-                close_pair.point_2->circ_id = close_pair.point_1->circ_id;
+                // Circuit with more boxes should grow, other circuit should shrink
+                if (circ_point_counts[close_pair.point_1->circ_id] >= circ_point_counts[close_pair.point_2->circ_id]) {
+                    circ_point_counts[close_pair.point_1->circ_id]++;
+                    circ_point_counts[close_pair.point_2->circ_id]--;
+                    close_pair.point_2->circ_id = close_pair.point_1->circ_id;
+                } else {
+                    circ_point_counts[close_pair.point_2->circ_id]++;
+                    circ_point_counts[close_pair.point_1->circ_id]--;
+                    close_pair.point_1->circ_id = close_pair.point_2->circ_id;
+                }
+                c++;
             }
             pairs.pop();
         }
