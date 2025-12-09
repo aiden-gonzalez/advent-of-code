@@ -136,14 +136,14 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    int connections = 10;
+    int connections = 1000;
 
     std::vector<Point> points;
     std::vector<int> circ_point_counts;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -171,25 +171,23 @@ int main() {
         }
 
         // Connect the "connections" closest pairs
-        int c = 0;
-        while (c < connections) {
+        for (int c = 0; c < connections; c++) {
             Pair close_pair = pairs.top();
             std::cout << close_pair << '\n';
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
-                // Circuit with more boxes should grow, other circuit should shrink
+                // Circuit with more boxes should get increased, other circuit goes to 0
                 if (circ_point_counts[close_pair.point_1->circ_id] >= circ_point_counts[close_pair.point_2->circ_id]) {
-                    circ_point_counts[close_pair.point_1->circ_id]++;
-                    circ_point_counts[close_pair.point_2->circ_id]--;
+                    circ_point_counts[close_pair.point_1->circ_id] += circ_point_counts[close_pair.point_2->circ_id];
+                    circ_point_counts[close_pair.point_2->circ_id] = 0;
                     close_pair.point_2->circ_id = close_pair.point_1->circ_id;
                     std::cout << "Connected! Circuit " << close_pair.point_1->circ_id << " now has " << circ_point_counts[close_pair.point_1->circ_id] << " boxes.\n";
                 } else {
-                    circ_point_counts[close_pair.point_2->circ_id]++;
-                    circ_point_counts[close_pair.point_1->circ_id]--;
+                    circ_point_counts[close_pair.point_2->circ_id] += circ_point_counts[close_pair.point_1->circ_id];
+                    circ_point_counts[close_pair.point_1->circ_id] = 0;
                     close_pair.point_1->circ_id = close_pair.point_2->circ_id;
                     std::cout << "Connected! Circuit " << close_pair.point_2->circ_id << " now has " << circ_point_counts[close_pair.point_2->circ_id] << " boxes.\n";
                 }
-                c++;
             }
             std::cout << '\n';
             pairs.pop();
@@ -197,6 +195,13 @@ int main() {
 
         // Sort circuits by number of points (descending)
         std::sort(circ_point_counts.begin(), circ_point_counts.end(), std::greater<int>());
+
+        for (int i = 0; i < circ_point_counts.size(); i++) {
+            if (circ_point_counts[i] > 0) {
+                std::cout << circ_point_counts[i] << '\n';
+            }
+        }
+        std::cout << '\n';
 
         // Multiply together the size of the 3 largest circuits
         long result = 1;
