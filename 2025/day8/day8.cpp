@@ -4,6 +4,7 @@
 #include <cmath>
 #include <functional>
 #include <unordered_set>
+#include <unordered_map>
 
 /*
     You step onto the repaired teleporter pad.  You rematerialize on an unfamiliar
@@ -144,7 +145,7 @@ class Pair {
 };
 
 std::ostream & operator<<(std::ostream & os, Pair const & p) {
-    os << "Pair: " << p.point_1 << " -> " << p.point_2 << " (" << p.dis << ")";
+    os << "Pair: " << *p.point_1 << " -> " << *p.point_2 << " (" << p.dis << ")";
     return os;
 }
 
@@ -153,6 +154,7 @@ int main() {
     std::ifstream input_file;
 
     std::vector<std::unordered_set<Point, PointHash>> circuits;
+    std::unordered_map<Point, std::unordered_set<Point, PointHash>> p_to_c;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
 
     // Open input file
@@ -164,13 +166,17 @@ int main() {
             // Parse line for coordinates separated by commas
             int first_comma_pos = line.find(',');
             int second_comma_pos = line.find(',', first_comma_pos + 1);
-            // Create point and new unordered set (circuit)
+            // Create point
             const Point p = Point(
                 std::stoi(line.substr(0, first_comma_pos)),
                 std::stoi(line.substr(first_comma_pos + 1, second_comma_pos - first_comma_pos - 1)),
                 std::stoi(line.substr(second_comma_pos + 1))
             );
+            // Create circuit with point as only element
             std::unordered_set<Point, PointHash> c = { p };
+            // Add entry to map between points and circuits
+            p_to_c[p] = c;
+            // Add circuit to list of circuits
             circuits.push_back(c);
         }
 
@@ -192,6 +198,13 @@ int main() {
         for (int pair = 0; pair < point_count; pair++) {
             Pair close_pair = pairs.top();
             std::cout << close_pair << '\n';
+            // If this pair is not yet part of the same circuit, connect (combine) their circuits
+            std::unordered_set<Point, PointHash> circ = p_to_c[*close_pair.point_1];
+            if (circ.count(*close_pair.point_2) == 0) {
+                circ.insert(*close_pair.point_2);
+                p_to_c[*close_pair.point_2] = circ;
+                p_to_c[*close_pair.point_2].erase(*close_pair.point_2);
+            }
             pairs.pop();
         }
 
