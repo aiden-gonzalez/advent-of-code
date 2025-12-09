@@ -95,8 +95,26 @@ class Point {
             return std::sqrt(std::pow(x - p.x, 2) + std::pow(y - p.y, 2) + std::pow(z - p.z, 2));
         }
 
-        // friend function: stream operator overload
+        // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Point & p);
+
+        // Necessary for placing into an unordered_set
+        bool operator == (const Point & op) const {
+            return x == op.x && y == op.y;
+        }
+};
+
+// Necessary for placing into an unordered_set
+struct PointHash {
+    size_t operator() (const Point & point) const {
+        size_t xHash = std::hash<int>()(point.x);
+        // Shift over yHash by 1 bit
+        size_t yHash = std::hash<int>()(point.y) << 1;
+        // Shift over zHash by 2 bits
+        size_t zHash = std::hash<int>()(point.z) << 2;
+        // XOR (exclusive or) the three hashes
+        return xHash ^ yHash ^ zHash;
+    }
 };
 
 std::ostream & operator<<(std::ostream & os, Point const & p) {
@@ -116,7 +134,7 @@ class Pair {
         const Point* point_2;
         double dis;
 
-        // friend function: stream operator overload
+        // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Pair & p);
 
         // For min-heap prioritization of Pairs by distance
@@ -134,7 +152,7 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    std::vector<std::unordered_set<Point>> circuits;
+    std::vector<std::unordered_set<Point, PointHash>> circuits;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
 
     // Open input file
@@ -152,7 +170,7 @@ int main() {
                 std::stoi(line.substr(first_comma_pos + 1, second_comma_pos - first_comma_pos - 1)),
                 std::stoi(line.substr(second_comma_pos + 1))
             );
-            std::unordered_set<Point> c = { p };
+            std::unordered_set<Point, PointHash> c = { p };
             circuits.push_back(c);
         }
 
@@ -169,8 +187,9 @@ int main() {
             }
         }
 
-        // Connecting the 1000 closest pairs, absorbing them into the same circuit
-        for (int pair = 0; pair < 1000; pair++) {
+        // Connect the n closest pairs
+        int point_count = circuits.size();
+        for (int pair = 0; pair < point_count; pair++) {
             Pair close_pair = pairs.top();
             std::cout << close_pair << '\n';
             pairs.pop();
