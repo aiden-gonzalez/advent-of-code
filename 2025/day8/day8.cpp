@@ -136,7 +136,10 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
+    int connections = 10;
+
     std::vector<Point> points;
+    std::vector<int> circ_point_counts;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
 
     // Open input file
@@ -144,7 +147,7 @@ int main() {
 
     if (input_file.is_open()) {
         // Read line by line
-        int circuit_id = 0;
+        int circuit_id = -1;
         while (getline(input_file, line)) {
             // Parse line for coordinates separated by commas
             int first_comma_pos = line.find(',');
@@ -156,6 +159,7 @@ int main() {
                 std::stoi(line.substr(second_comma_pos + 1)),
                 ++circuit_id
             );
+            circ_point_counts.push_back(1);
             points.push_back(p);
         }
 
@@ -166,16 +170,30 @@ int main() {
             }
         }
 
-        // Connect the n closest pairs
-        for (int pair = 0; pair < points.size(); pair++) {
+        // Connect the "connections" closest pairs
+        for (int p = 0; p < connections; p++) {
             Pair close_pair = pairs.top();
-            std::cout << close_pair << '\n';
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
+                // Update circuit point counts
+                circ_point_counts[close_pair.point_2->circ_id]--;
+                circ_point_counts[close_pair.point_1->circ_id]++;
+                // Move point 2 to point 1's circuit
                 close_pair.point_2->circ_id = close_pair.point_1->circ_id;
             }
             pairs.pop();
         }
+
+        // Sort circuits by number of points (descending)
+        std::sort(circ_point_counts.begin(), circ_point_counts.end(), std::greater<int>());
+
+        // Get multiplied size of 3 largest circuits
+        long result = 1;
+        for (int i = 0; i < 3 && i < circ_point_counts.size(); i++) {
+            result = result * circ_point_counts[i];
+        }
+
+        std::cout << "Result: " << result << std::endl;
 
         input_file.close();
     } else {
