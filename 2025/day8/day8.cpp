@@ -3,7 +3,6 @@
 #include <string>
 #include <cmath>
 #include <functional>
-#include <unordered_set>
 #include <unordered_map>
 
 /*
@@ -82,15 +81,17 @@
 
 class Point {
     public:
-        Point (int a, int b, int c) {
+        Point (int a, int b, int c, int cid) {
             x = a;
             y = b;
             z = c;
+            circ_id = cid;
         }
 
         int x;
         int y;
         int z;
+        int circ_id;
 
         double distance(Point p) const {
             return std::sqrt(std::pow(x - p.x, 2) + std::pow(y - p.y, 2) + std::pow(z - p.z, 2));
@@ -98,28 +99,10 @@ class Point {
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Point & p);
-
-        // Necessary for placing into an unordered_set
-        bool operator == (const Point & op) const {
-            return x == op.x && y == op.y;
-        }
-};
-
-// Necessary for placing into an unordered_set
-struct PointHash {
-    size_t operator() (const Point & point) const {
-        size_t xHash = std::hash<int>()(point.x);
-        // Shift over yHash by 1 bit
-        size_t yHash = std::hash<int>()(point.y) << 1;
-        // Shift over zHash by 2 bits
-        size_t zHash = std::hash<int>()(point.z) << 2;
-        // XOR (exclusive or) the three hashes
-        return xHash ^ yHash ^ zHash;
-    }
 };
 
 std::ostream & operator<<(std::ostream & os, Point const & p) {
-    os << "Point: " << p.x << "," << p.y << "," << p.z;
+    os << "Point: " << p.x << "," << p.y << "," << p.z << " (Circuit " << p.circ_id << ")";
     return os;
 }
 
@@ -153,8 +136,7 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    std::vector<std::unordered_set<Point, PointHash>> circuits;
-    std::unordered_map<Point, std::unordered_set<Point, PointHash>> p_to_c;
+    std::vector<Point> points;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
 
     // Open input file
@@ -162,6 +144,7 @@ int main() {
 
     if (input_file.is_open()) {
         // Read line by line
+        int circuit_id = 0;
         while (getline(input_file, line)) {
             // Parse line for coordinates separated by commas
             int first_comma_pos = line.find(',');
@@ -170,40 +153,26 @@ int main() {
             const Point p = Point(
                 std::stoi(line.substr(0, first_comma_pos)),
                 std::stoi(line.substr(first_comma_pos + 1, second_comma_pos - first_comma_pos - 1)),
-                std::stoi(line.substr(second_comma_pos + 1))
+                std::stoi(line.substr(second_comma_pos + 1)),
+                ++circuit_id
             );
-            // Create circuit with point as only element
-            std::unordered_set<Point, PointHash> c = { p };
-            // Add entry to map between points and circuits
-            p_to_c[p] = c;
-            // Add circuit to list of circuits
-            circuits.push_back(c);
+            points.push_back(p);
         }
 
         // Create pairs of points and put them into a min-heap by distance
-        for (int c1 = 0; c1 < circuits.size(); c1++) {
-            for (int c2 = c1 + 1; c2 < circuits.size(); c2++) {      
-                pairs.push(
-                    Pair(
-                        &(*circuits[c1].begin()),
-                        &(*circuits[c2].begin()),
-                        (*circuits[c1].begin()).distance(*circuits[c2].begin())
-                    )
-                );
+        for (int p1 = 0; p1 < points.size(); p1++) {
+            for (int p2 = p1 + 1; p2 < points.size(); p2++) {      
+                pairs.push(Pair(&points[p1], &points[p2], points[p1].distance(points[p2])));
             }
         }
 
         // Connect the n closest pairs
-        int point_count = circuits.size();
-        for (int pair = 0; pair < point_count; pair++) {
+        for (int pair = 0; pair < points.size(); pair++) {
             Pair close_pair = pairs.top();
             std::cout << close_pair << '\n';
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
-            std::unordered_set<Point, PointHash> circ = p_to_c[*close_pair.point_1];
-            if (circ.count(*close_pair.point_2) == 0) {
-                circ.insert(*close_pair.point_2);
-                p_to_c[*close_pair.point_2] = circ;
-                p_to_c[*close_pair.point_2].erase(*close_pair.point_2);
+            if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
+                //close_pair.point_2->circ_id = close_pair.point_1->circ_id;
             }
             pairs.pop();
         }
