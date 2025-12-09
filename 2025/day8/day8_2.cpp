@@ -8,7 +8,22 @@
 /*
     Part 2:
 
-    
+    The elves definitely don't have enough extension cables. You'll need to keep
+    connecting junction boxes together until they're all in one large circuit.
+
+    Continuing the above example, the first connection which causes all of the
+    junction boxes to form a single circuit is between the junction boxes at
+    216,146,977 and 177,168,530.  The elves need to know how far those junction
+    boxes are from the wall so they can pick the right extension cable.
+
+    Multiplying the X coordinates of those two junction boxes (216 and 117)
+    produces 25272.
+
+    Continue connecting the closest unconnected pairs of junction boxes together
+    until they're all in the same circuit. What do you get if you multiply together
+    the X coordinates of the last two junction boxes you need to connect?
+
+    Ok this shouldn't be that bad at all.
 */
 
 class Point {
@@ -68,8 +83,6 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    int connections = 1000;
-
     std::vector<Point*> points;
     std::unordered_map<int, std::vector<Point*>> circuits;
     std::priority_queue<Pair, std::vector<Pair>, std::greater<Pair>> pairs;
@@ -104,11 +117,17 @@ int main() {
             }
         }
 
-        // Connect the "connections" closest pairs
-        for (int c = 0; c < connections; c++) {
+        // Connect the pairs until you achieve one big circuit
+        long x1;
+        long x2;
+        while (circuits.size() > 1) {
             Pair close_pair = pairs.top();
             // If this pair is not yet part of the same circuit, connect (combine) their circuits
             if (close_pair.point_1->circ_id != close_pair.point_2->circ_id) {
+                // Save x coords in case this is the last connection
+                x1 = close_pair.point_1->x;
+                x2 = close_pair.point_2->x;
+
                 // Larger circuit absorbs the smaller circuit
                 int l_cid;
                 int s_cid;
@@ -133,26 +152,8 @@ int main() {
             pairs.pop();
         }
 
-        // Get largest 3 circuit sizes
-        int l = 0;
-        int sl = 0;
-        int tl = 0;
-        for (const auto & pair : circuits) {
-            if (pair.second.size() >= l) {
-                tl = sl;
-                sl = l;
-                l = pair.second.size();
-            } else if (pair.second.size() >= sl) {
-                tl = sl;
-                sl = pair.second.size();
-            } else if (pair.second.size() >= tl) {
-                tl = pair.second.size();
-            }
-        }
-
-        // Multiply together the size of the 3 largest circuits
-        long result = l * sl * tl;
-
+        long result = x1 * x2;
+        
         std::cout << "Result: " << result << std::endl;
 
         // Delete allocated points
