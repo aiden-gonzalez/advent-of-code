@@ -85,6 +85,31 @@ std::ostream & operator<<(std::ostream & os, Pair const & p) {
     return os;
 }
 
+void draw_line(std::vector<std::vector<bool>>& grid, Point *p, Point *prev_p) {
+    // Horizontal line
+    if (p->x != prev_p->x) {
+        // Ensure grid row is large enough (2 rows buffer)
+        while (grid[p->y].size() < std::max(p->x, prev_p->x) + 3) {
+            grid[p->y].push_back(false);
+        }
+        // Draw horizontal line in grid
+        for (int col = std::min(p->x, prev_p->x); col <= std::max(p->x, prev_p->x); col++) {
+            grid[p->y][col] = true;
+        }
+    // Vertical line
+    } else if (p->y != prev_p->y) {
+        // Ensure grid has enough rows (1 row buffer)
+        while (grid.size() < std::max(p->y, prev_p->y) + 2) {
+            std::vector<bool> new_row(p->x + 1, false);
+            grid.push_back(new_row);
+        }
+        // Draw vertical line in grid
+        for (int row = std::min(p->y, prev_p->y); row <= std::max(p->y, prev_p->y); row++) {
+            grid[row][p->x] = true;
+        }
+    }
+}
+
 int main() {
     std::string line;
     std::ifstream input_file;
@@ -98,53 +123,60 @@ int main() {
 
     if (input_file.is_open()) {
         // Read line by line
-        int idx_start;
-        int idx_end;
-        bool horizontal;
         while (getline(input_file, line)) {
             int comma_idx = line.find(',');
             Point p = Point(
                 std::stoi(line.substr(0, comma_idx)),
                 std::stoi(line.substr(comma_idx + 1))
             );
+            std::cout << p << '\n';
 
-            if (points.size()>1) {
-                if (p.x < points.back().x) {
-                    idx_start = p.x;
-                    idx_end = points.back().x;
-                    horizontal = 1;
-                } else if (p.x > points.back().x) {
-                    idx_start = points.back().x;
-                    idx_end = p.x;
-                    horizontal = 1;
-                } else if (p.y < points.back().y) {
-                    idx_start = p.y;
-                    idx_end = points.back().y;
-                    horizontal = 0;
-                } else {
-                    idx_start = points.back().y;
-                    idx_start = p.y;
-                    horizontal = 0;
+            if (points.size() > 0) {
+                Point prev_p = points.back();
+                std::cout << prev_p << '\n';
+                
+                draw_line(grid, &p, &prev_p);
+            } else {
+                // Initialize grid
+                for (int row = 0; row <= p.y; row++) {
+                    std::vector<bool> row_vec(p.x + 1, false);
+                    grid.push_back(row_vec);
                 }
-                if (horizontal) {
-                    for (int i = idx_start; i <= idx_end; i++) {
-                        grid[i][p.y] = 1;
-                    }
-                } else {
-                    for (int i = idx_start; i <= idx_end; i++) {
-                        grid[p.x][i] = 1;
-                    }
-                }
+                // Mark first point on grid
+                grid[p.y][p.x] = true;
             }
+
+            std::cout << '\n';
             points.push_back(p);
         }
+
+        // Draw last line
+        draw_line(grid, &points.back(), &points.front());
+
+        // Rectangularize grid
+        int width = 0;
+        for (int i = 0; i < grid.size(); i++) {
+            if (grid[i].size() > width) {
+                width = grid[i].size();
+            }
+        }
+        for (int row = 0; row < grid.size(); row++) {
+            while (grid[row].size() < width) {
+                grid[row].push_back(false);
+            }
+
+            // TODO also fill in grid here
+        }
+
+        // TODO remove: preview grid
         for (std::vector<bool> grid_row : grid) {
             for (bool grid_element : grid_row) {
-                std::cout << grid_element << std::endl;
+                std::cout << grid_element;
             }
             std::cout << std::endl;
         }
-        // Create all possible rectangles
+
+        // Create all allowable rectangles
         for (int i = 0; i < points.size(); i++) {
             for (int j = i; j < points.size(); j++) {
                 rectangles.push(Pair(
