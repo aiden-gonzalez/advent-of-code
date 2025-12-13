@@ -85,6 +85,10 @@ std::ostream & operator<<(std::ostream & os, Pair const & p) {
     return os;
 }
 
+long gi(long row,long col,long gw) {
+    return gw * row + col;
+} 
+
 int main() {
     std::string line;
     std::ifstream input_file;
@@ -94,27 +98,32 @@ int main() {
     
     if (input_file.is_open()) {
         // Read file to find biggest x and y coord
-        int grid_width = 0;
-        int grid_height = 0;
+        int gw = 0;
+        int gh = 0;
         while (getline(input_file, line)) {
             int comma_idx = line.find(',');
             int x = std::stoi(line.substr(0, comma_idx));
             int y = std::stoi(line.substr(comma_idx + 1));
-            
-            if (x > grid_width) {
-                grid_width = x;
+
+            if (x > gw) {
+                gw = x;
             }
-            if (y > grid_height) {
-                grid_height = y;
+            if (y > gh) {
+                gh = y;
             }
         }
+        // Change width and height to size rather than last coordinate
+        gw++;
+        gh++;
 
         std::vector<Point> points;
         std::priority_queue<Pair> rectangles;
 
-        // Initialize grid with 2 spaces of buffer
-        bool grid[grid_height + 3][grid_width + 3];
-
+        // Initialize 1D vector to represent the grid
+        // to index through the elements of the grid, row 0 is 0 to gw-1, row 1 is gw*1 to gw*2 - 1
+        // index = gw * row + col
+        // for row index 1 col index 2 if grid is 3x3: gw*1 + 2 = grid[5]
+        std::vector<bool> grid (gh * gw, false);
 
         // Reset file pointer
         input_file.clear();
@@ -130,23 +139,23 @@ int main() {
             );
             
             if (points.size() > 0) {
-                Point prev_p = points.back();                
+                Point prev_p = points.back();
                 // Horizontal line
                 if (p.x != prev_p.x) {
                     // Draw horizontal line in grid
                     for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
-                        grid[p.y][col] = true;
+                        grid[gi(p.y, col, gw)] = true;
                     }
                 // Vertical line
                 } else if (p.y != prev_p.y) {
                     // Draw vertical line in grid
                     for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
-                        grid[row][p.x] = true;
+                        grid[gi(row, p.x, gw)] = true;
                     }
                 }
             } else {
                 // Mark first point on grid
-                grid[p.y][p.x] = true;
+                grid[gi(p.y, p.x, gw)] = true;
             }
 
             points.push_back(p);
@@ -159,36 +168,36 @@ int main() {
         if (p.x != prev_p.x) {
             // Draw horizontal line in grid
             for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
-                grid[p.y][col] = true;
+                grid[gi(p.y, col, gw)] = true;
             }
         // Vertical line
         } else if (p.y != prev_p.y) {
             // Draw vertical line in grid
             for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
-                grid[row][p.x] = true;
+                grid[gi(row, p.x, gw)] = true;
             }
         }
 
         // Fill the inside of the shape
-        for (int row = 0; row < grid_height; row++) {
-            for (int col = 0; col < grid_width; col++) {
+        for (int row = 0; row < gh; row++) {
+            for (int col = 0; col < gw; col++) {
                 std::cout << "Filling " << row << " " << col << '\n';
                 // If we encounter a 1, fill space
-                if (grid[row][col]) {
+                if (grid[gi(row, col, gw)]) {
                     // Handle possible horizontal line
-                    while (col < grid_width && grid[row][col]) {
+                    while (col < gw && grid[gi(row, col, gw)]) {
                         col++;
                     }
                     int fill_start = col;
                     // Fill until another 1 (or the end of the grid)
-                    while (col < grid_width && !grid[row][col]) {
-                        grid[row][col] = true;
+                    while (col < gw && !grid[gi(row, col, gw)]) {
+                        grid[gi(row, col, gw)] = true;
                         col++;
                     }
                     // If we went outside the grid without seeing a 1, undo the fill
-                    if (col == grid_width) {
+                    if (col == gw) {
                         for (int i = col - 1; i >= fill_start; i--) {
-                            grid[row][i] = false;
+                            grid[gi(row, i, gw)] = false;
                         }
                         break;
                     }
@@ -197,9 +206,9 @@ int main() {
         }
 
         // TODO remove: preview grid
-        for (int i = 0; i < grid_height; i++) {
-            for (int j = 0; j < grid_width; j++) {
-                std::cout << grid[i][j];
+        for (int i = 0; i < gh; i++) {
+            for (int j = 0; j < gw; j++) {
+                std::cout << grid[gi(i, j, gw)];
             }
             std::cout << std::endl;
         }
@@ -211,7 +220,7 @@ int main() {
                 bool allowed = true;
                 for (int x = std::min(points[i].x, points[j].x); x <= std::max(points[i].x, points[j].x); x++) {
                     for (int y = std::min(points[i].y, points[j].y); y <= std::max(points[i].y, points[j].y); y++) {
-                        if (!grid[y][x]) {
+                        if (!grid[gi(y, x, gw)]) {
                             allowed = false;
                             break;
                         }
