@@ -113,17 +113,16 @@ int main() {
             }
         }
         // Change width and height to size rather than last coordinate
-        gw++;
-        gh++;
+        gw += 3;
+        gh += 2;
 
         std::vector<Point> points;
         std::priority_queue<Pair> rectangles;
 
         // Initialize 1D vector to represent the grid
-        // to index through the elements of the grid, row 0 is 0 to gw-1, row 1 is gw*1 to gw*2 - 1
         // index = gw * row + col
-        // for row index 1 col index 2 if grid is 3x3: gw*1 + 2 = grid[5]
-        std::vector<bool> grid (gh * gw, false);
+        long grid_size = (long)gh * (long)gw;
+        std::vector<bool> grid (grid_size, false);
 
         // Reset file pointer
         input_file.clear();
