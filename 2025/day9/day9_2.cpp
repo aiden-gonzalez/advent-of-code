@@ -129,12 +129,9 @@ int main() {
                 std::stoi(line.substr(0, comma_idx)),
                 std::stoi(line.substr(comma_idx + 1))
             );
-            std::cout << p << '\n';
 
             if (points.size() > 0) {
-                Point prev_p = points.back();
-                std::cout << prev_p << '\n';
-                
+                Point prev_p = points.back();                
                 draw_line(grid, &p, &prev_p);
             } else {
                 // Initialize grid
@@ -146,7 +143,6 @@ int main() {
                 grid[p.y][p.x] = true;
             }
 
-            std::cout << '\n';
             points.push_back(p);
         }
 
@@ -155,17 +151,54 @@ int main() {
 
         // Rectangularize grid
         int width = 0;
+        // Find the max width
         for (int i = 0; i < grid.size(); i++) {
             if (grid[i].size() > width) {
                 width = grid[i].size();
             }
         }
+        // Make all rows the max width
         for (int row = 0; row < grid.size(); row++) {
             while (grid[row].size() < width) {
                 grid[row].push_back(false);
             }
+        }
 
-            // TODO also fill in grid here
+        // Cassandra's thing:
+        // for (int row = 0; row < grid.size(); row++) {
+        //     for (int col = 0; col < ceil(grid[row].size()/2); col++) {
+        //         if (grid[row][col] && !grid[row][col+1]) {
+        //                 grid[row][col+1] = true;
+        //         }
+        //         if (grid[row][grid[row].size()-col]) {
+        //                 grid[row][grid[row].size()-col-1] = true;
+        //         }
+        //     }
+        // }
+        // Fill the inside of the shape
+        for (int row = 0; row < grid.size(); row++) {
+            for (int col = 0; col < grid[row].size(); col++) {
+                // If we encounter a 1, fill space
+                if (grid[row][col]) {
+                    // Handle possible horizontal line
+                    while (col < grid[row].size() && grid[row][col]) {
+                        col++;
+                    }
+                    int fill_start = col;
+                    // Fill until another 1 (or the end of the grid)
+                    while (col < grid[row].size() && !grid[row][col]) {
+                        grid[row][col] = true;
+                        col++;
+                    }
+                    // If we went outside the grid without seeing a 1, undo the fill
+                    if (col == grid[row].size()) {
+                        for (int i = col - 1; i >= fill_start; i--) {
+                            grid[row][i] = false;
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         // TODO remove: preview grid
