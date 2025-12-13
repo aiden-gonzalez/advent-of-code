@@ -85,60 +85,66 @@ std::ostream & operator<<(std::ostream & os, Pair const & p) {
     return os;
 }
 
-void draw_line(std::vector<std::vector<bool>>& grid, Point *p, Point *prev_p) {
-    // Horizontal line
-    if (p->x != prev_p->x) {
-        // Ensure grid row is large enough (2 rows buffer)
-        while (grid[p->y].size() < std::max(p->x, prev_p->x) + 3) {
-            grid[p->y].push_back(false);
-        }
-        // Draw horizontal line in grid
-        for (int col = std::min(p->x, prev_p->x); col <= std::max(p->x, prev_p->x); col++) {
-            grid[p->y][col] = true;
-        }
-    // Vertical line
-    } else if (p->y != prev_p->y) {
-        // Ensure grid has enough rows (1 row buffer)
-        while (grid.size() < std::max(p->y, prev_p->y) + 2) {
-            std::vector<bool> new_row(p->x + 1, false);
-            grid.push_back(new_row);
-        }
-        // Draw vertical line in grid
-        for (int row = std::min(p->y, prev_p->y); row <= std::max(p->y, prev_p->y); row++) {
-            grid[row][p->x] = true;
-        }
-    }
-}
-
 int main() {
     std::string line;
     std::ifstream input_file;
 
-    std::vector<Point> points;
-    std::vector<std::vector<bool>> grid;
-    std::priority_queue<Pair> rectangles;
-
     // Open input file
-    input_file.open("example_input.txt");
-
+    input_file.open("input.txt");
+    
     if (input_file.is_open()) {
-        // Read line by line
+        // Read file to find biggest x and y coord
+        int grid_width = 0;
+        int grid_height = 0;
         while (getline(input_file, line)) {
             int comma_idx = line.find(',');
+            int x = std::stoi(line.substr(0, comma_idx));
+            int y = std::stoi(line.substr(comma_idx + 1));
+            
+            if (x > grid_width) {
+                grid_width = x;
+            }
+            if (y > grid_height) {
+                grid_height = y;
+            }
+        }
+
+        std::vector<Point> points;
+        std::priority_queue<Pair> rectangles;
+
+        // Initialize grid with 2 spaces of buffer
+        bool grid[grid_height + 3][grid_width + 3];
+
+
+        // Reset file pointer
+        input_file.clear();
+        input_file.seekg(0);
+
+        // Read points line by line
+        while (getline(input_file, line)) {
+            int comma_idx = line.find(',');
+            
             Point p = Point(
                 std::stoi(line.substr(0, comma_idx)),
                 std::stoi(line.substr(comma_idx + 1))
             );
-
+            
             if (points.size() > 0) {
                 Point prev_p = points.back();                
-                draw_line(grid, &p, &prev_p);
-            } else {
-                // Initialize grid
-                for (int row = 0; row <= p.y; row++) {
-                    std::vector<bool> row_vec(p.x + 1, false);
-                    grid.push_back(row_vec);
+                // Horizontal line
+                if (p.x != prev_p.x) {
+                    // Draw horizontal line in grid
+                    for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
+                        grid[p.y][col] = true;
+                    }
+                // Vertical line
+                } else if (p.y != prev_p.y) {
+                    // Draw vertical line in grid
+                    for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
+                        grid[row][p.x] = true;
+                    }
                 }
+            } else {
                 // Mark first point on grid
                 grid[p.y][p.x] = true;
             }
@@ -147,51 +153,40 @@ int main() {
         }
 
         // Draw last line
-        draw_line(grid, &points.back(), &points.front());
-
-        // Rectangularize grid
-        int width = 0;
-        // Find the max width
-        for (int i = 0; i < grid.size(); i++) {
-            if (grid[i].size() > width) {
-                width = grid[i].size();
+        // Horizontal line
+        Point p = points.back();
+        Point prev_p = points.front();
+        if (p.x != prev_p.x) {
+            // Draw horizontal line in grid
+            for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
+                grid[p.y][col] = true;
+            }
+        // Vertical line
+        } else if (p.y != prev_p.y) {
+            // Draw vertical line in grid
+            for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
+                grid[row][p.x] = true;
             }
         }
-        // Make all rows the max width
-        for (int row = 0; row < grid.size(); row++) {
-            while (grid[row].size() < width) {
-                grid[row].push_back(false);
-            }
-        }
 
-        // Cassandra's thing:
-        // for (int row = 0; row < grid.size(); row++) {
-        //     for (int col = 0; col < ceil(grid[row].size()/2); col++) {
-        //         if (grid[row][col] && !grid[row][col+1]) {
-        //                 grid[row][col+1] = true;
-        //         }
-        //         if (grid[row][grid[row].size()-col]) {
-        //                 grid[row][grid[row].size()-col-1] = true;
-        //         }
-        //     }
-        // }
         // Fill the inside of the shape
-        for (int row = 0; row < grid.size(); row++) {
-            for (int col = 0; col < grid[row].size(); col++) {
+        for (int row = 0; row < grid_height; row++) {
+            for (int col = 0; col < grid_width; col++) {
+                std::cout << "Filling " << row << " " << col << '\n';
                 // If we encounter a 1, fill space
                 if (grid[row][col]) {
                     // Handle possible horizontal line
-                    while (col < grid[row].size() && grid[row][col]) {
+                    while (col < grid_width && grid[row][col]) {
                         col++;
                     }
                     int fill_start = col;
                     // Fill until another 1 (or the end of the grid)
-                    while (col < grid[row].size() && !grid[row][col]) {
+                    while (col < grid_width && !grid[row][col]) {
                         grid[row][col] = true;
                         col++;
                     }
                     // If we went outside the grid without seeing a 1, undo the fill
-                    if (col == grid[row].size()) {
+                    if (col == grid_width) {
                         for (int i = col - 1; i >= fill_start; i--) {
                             grid[row][i] = false;
                         }
@@ -202,25 +197,43 @@ int main() {
         }
 
         // TODO remove: preview grid
-        for (std::vector<bool> grid_row : grid) {
-            for (bool grid_element : grid_row) {
-                std::cout << grid_element;
+        for (int i = 0; i < grid_height; i++) {
+            for (int j = 0; j < grid_width; j++) {
+                std::cout << grid[i][j];
             }
             std::cout << std::endl;
         }
 
         // Create all allowable rectangles
-        for (int i = 0; i < points.size(); i++) {
-            for (int j = i; j < points.size(); j++) {
-                rectangles.push(Pair(
-                    &points[i],
-                    &points[j],
-                    points[i].area(points[j])
-                ));
+        for (int i = 0; i < points.size() - 1; i++) {
+            for (int j = i + 1; j < points.size(); j++) {
+                // Check that rectangle is allowable
+                bool allowed = true;
+                for (int x = std::min(points[i].x, points[j].x); x <= std::max(points[i].x, points[j].x); x++) {
+                    for (int y = std::min(points[i].y, points[j].y); y <= std::max(points[i].y, points[j].y); y++) {
+                        if (!grid[y][x]) {
+                            allowed = false;
+                            break;
+                        }
+                    }
+                    if (!allowed) {
+                        break;
+                    }
+                }
+                if (allowed) {
+                    rectangles.push(Pair(
+                        &points[i],
+                        &points[j],
+                        points[i].area(points[j])
+                    ));
+                }
             }
         }
 
-        std::cout << "Largest rectangle area: " << rectangles.top().area << std::endl;
+        Pair largest = rectangles.top();
+        std::cout << "Largest rectangle area: " << largest.area << '\n';
+        std::cout << largest.point_1->x << "," << largest.point_1->y << '\n';
+        std::cout << largest.point_2->x << "," << largest.point_2->y << std::endl;
 
         input_file.close();
     } else {
