@@ -117,6 +117,15 @@ int main() {
             std::cout << machines[i] << '\n';
         }
 
+        // Test: Push 2 buttons
+        int lights = 0;
+        // Push (0, 2) (10)
+        lights = lights ^ 10;
+        // Push (0, 1) (12)
+        lights = lights ^ 12;
+        // Result should equal 6
+        std::cout << "lights result: " << lights << '\n';
+
         input_file.close();
     } else {
         std::cout << "Unable to open file";
