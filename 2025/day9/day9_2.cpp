@@ -87,7 +87,45 @@ std::ostream & operator<<(std::ostream & os, Pair const & p) {
 
 long gi(long row,long col,long gw) {
     return gw * row + col;
-} 
+}
+
+void draw_line(std::vector<bool>& grid, long gw, Point *p, Point *p2) {
+    // Horizontal line
+    if (p->x != p2->x) {
+        // Draw horizontal line in grid
+        for (int col = std::min(p->x, p2->x); col <= std::max(p->x, p2->x); col++) {
+            grid[gi(p->y, col, gw)] = true;
+        }
+    // Vertical line
+    } else if (p->y != p2->y) {
+        // Draw vertical line in grid
+        for (int row = std::min(p->y, p2->y); row <= std::max(p->y, p2->y); row++) {
+            grid[gi(row, p->x, gw)] = true;
+        }
+    }
+}
+
+bool check_line(std::vector<bool>& grid, long gw, Point *p, Point *p2) {
+    bool all_true = true;
+    // Check horizontal line
+    if (p->x != p2->x) {
+        for (int col = std::min(p->x, p2->x); col <= std::max(p->x, p2->x); col++) {
+            if (!grid[gi(p->y, col, gw)]) {
+                all_true = false;
+                break;
+            }
+        }
+    // Check vertical line
+    } else if (p->y != p2->y) {
+        for (int row = std::min(p->y, p2->y); row <= std::max(p->y, p2->y); row++) {
+            if (!grid[gi(row, p->x, gw)]) {
+                all_true = false;
+                break;
+            }
+        }
+    }
+    return all_true;
+}
 
 int main() {
     std::string line;
@@ -138,20 +176,7 @@ int main() {
             );
             
             if (points.size() > 0) {
-                Point prev_p = points.back();
-                // Horizontal line
-                if (p.x != prev_p.x) {
-                    // Draw horizontal line in grid
-                    for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
-                        grid[gi(p.y, col, gw)] = true;
-                    }
-                // Vertical line
-                } else if (p.y != prev_p.y) {
-                    // Draw vertical line in grid
-                    for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
-                        grid[gi(row, p.x, gw)] = true;
-                    }
-                }
+                draw_line(grid, gw, &p, &points.back());
             } else {
                 // Mark first point on grid
                 grid[gi(p.y, p.x, gw)] = true;
@@ -161,26 +186,14 @@ int main() {
         }
 
         // Draw last line
-        // Horizontal line
-        Point p = points.back();
-        Point prev_p = points.front();
-        if (p.x != prev_p.x) {
-            // Draw horizontal line in grid
-            for (int col = std::min(p.x, prev_p.x); col <= std::max(p.x, prev_p.x); col++) {
-                grid[gi(p.y, col, gw)] = true;
-            }
-        // Vertical line
-        } else if (p.y != prev_p.y) {
-            // Draw vertical line in grid
-            for (int row = std::min(p.y, prev_p.y); row <= std::max(p.y, prev_p.y); row++) {
-                grid[gi(row, p.x, gw)] = true;
-            }
-        }
+        draw_line(grid, gw, &points.back(), &points.front());
 
         // Fill the inside of the shape
         for (int row = 0; row < gh; row++) {
+            if (row % 1000 == 0) {
+                std::cout << "Filling row " << row << '\n';
+            }
             for (int col = 0; col < gw; col++) {
-                std::cout << "Filling " << row << " " << col << '\n';
                 // If we encounter a 1, fill space
                 if (grid[gi(row, col, gw)]) {
                     // Handle possible horizontal line
@@ -204,30 +217,46 @@ int main() {
             }
         }
 
-        // TODO remove: preview grid
-        for (int i = 0; i < gh; i++) {
-            for (int j = 0; j < gw; j++) {
-                std::cout << grid[gi(i, j, gw)];
-            }
-            std::cout << std::endl;
-        }
+        std::cout << "Done filling the shape!" << '\n';
 
         // Create all allowable rectangles
         for (int i = 0; i < points.size() - 1; i++) {
+            if (i % 10 == 0) {
+                std::cout << "Checking rectangles for point " << i << '\n';
+            }
             for (int j = i + 1; j < points.size(); j++) {
                 // Check that rectangle is allowable
                 bool allowed = true;
-                for (int x = std::min(points[i].x, points[j].x); x <= std::max(points[i].x, points[j].x); x++) {
-                    for (int y = std::min(points[i].y, points[j].y); y <= std::max(points[i].y, points[j].y); y++) {
-                        if (!grid[gi(y, x, gw)]) {
-                            allowed = false;
+                Point top_left = Point(std::min(points[i].x, points[j].x), std::min(points[i].y, points[j].y));
+                Point top_right = Point(std::max(points[i].x, points[j].x), std::min(points[i].y, points[j].y));
+                Point bot_left = Point(std::min(points[i].x, points[j].x), std::max(points[i].y, points[j].y));
+                Point bot_right = Point(std::max(points[i].x, points[j].x), std::max(points[i].y, points[j].y));
+                // Check perimeter of rectangle first
+                allowed = check_line(grid, gw, &top_left, &top_right);
+                if (allowed) {
+                    allowed = check_line(grid, gw, &top_right, &bot_right);
+                }
+                if (allowed) {
+                    allowed = check_line(grid, gw, &bot_left, &bot_right);
+                }
+                if (allowed) {
+                    allowed = check_line(grid, gw, &top_left, &bot_left);
+                }
+                // Check inside of rectangle if necessary
+                if (allowed) {
+                    for (int x = std::min(points[i].x, points[j].x); x <= std::max(points[i].x, points[j].x); x++) {
+                        for (int y = std::min(points[i].y, points[j].y); y <= std::max(points[i].y, points[j].y); y++) {
+                            if (!grid[gi(y, x, gw)]) {
+                                allowed = false;
+                                break;
+                            }
+                        }
+                        if (!allowed) {
                             break;
                         }
                     }
-                    if (!allowed) {
-                        break;
-                    }
                 }
+                
                 if (allowed) {
                     rectangles.push(Pair(
                         &points[i],
