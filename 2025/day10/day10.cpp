@@ -38,6 +38,30 @@
 
     What is the fewest button presses required to correctly configure the indicator
     lights on all of the machines (sum up all machines)?
+
+    [....] -> [.#.#] -> [.##.].  No need to hit (0, 1) twice. In fact, there is no need
+    to press anything more than once. Pressing anything twice is the same as not
+    pressing it at all.  Three times is the same as pressing it once, etc. No repeats.
+
+    So, you could try every combination of one button. Then two. Then three. Etc until
+    you get a combo that works. Not exactly sure how I'll set up the loop to be able
+    to do that, but I think I can do it.
+    - Actually, here's a more clever, "two sum" sort of way to do it.  If it's one,
+      then the lights will directly match one of the buttons.  light = button.
+    - Then if it's two presses, in a two sum sense you could see if for each button,
+      the target minus that button equals another button
+    - For three sum, you'll need to pick a button then do two sum with the rest of
+      the possible buttons and the target end configuration. And then do that for
+      each button.
+    - For four sum, you'll need to pick every combo of two buttons possible and
+      then do two sum for the remaining.
+    - For five sum, you'll need to pick every combo of three possible and then do
+      two sum with the remaining.
+    So on and so forth. Simple in theory, but to actually implement a generalized
+    loop of this might be tricky. But not impossible.
+
+    If button_1 ^ button_2 = ind_lights.  For example 10 ^ 12 = 6.  Then,
+    10 = 6 ^ 12. And therein lies your two-sum.
 */
 
 class Machine {
@@ -45,10 +69,12 @@ class Machine {
         Machine (int il, std::vector<int> bs) {
             ind_lights = il;
             buttons = bs;
+            min_presses = 0;
         }
 
         int ind_lights;
         std::vector<int> buttons;
+        int min_presses;
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Machine & m);
@@ -59,6 +85,7 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
     for (int i = 0; i < m.buttons.size(); i++) {
         std::cout << " (" << m.buttons[i] << ")";
     }
+    std::cout << " -> " << m.min_presses;
     return os;
 }
 
@@ -67,6 +94,7 @@ int main() {
     std::ifstream input_file;
 
     std::vector<Machine> machines;
+    std::vector<int> presses;
 
     // Open input file
     input_file.open("example_input.txt");
@@ -112,19 +140,44 @@ int main() {
             machines.push_back(Machine(indicator, buttons));
         }
 
-        // TODO REMOVE: Preview machines
-        for (int i = 0; i < machines.size(); i++) {
-            std::cout << machines[i] << '\n';
-        }
+        // Find the solution for each machine
+        for (int m = 0; m < machines.size(); m++) {
+            // Zero presses isn't part of the input, but theoretically possible
+            if (machines[m].ind_lights == 0) {
+                machines[m].min_presses = 0;
+                continue;
+            }
 
-        // Test: Push 2 buttons
-        int lights = 0;
-        // Push (0, 2) (10)
-        lights = lights ^ 10;
-        // Push (0, 1) (12)
-        lights = lights ^ 12;
-        // Result should equal 6
-        std::cout << "lights result: " << lights << '\n';
+            // Check for one press solution
+            for (int b = 0; b < machines[m].buttons.size(); b++) {
+                if (machines[m].buttons[b] == machines[m].ind_lights) {
+                    machines[m].min_presses = 1;
+                    break;
+                }
+            }
+            if (machines[m].min_presses == 1) {
+                continue;
+            }
+
+            // For two presses and up: two-sum style solution
+            for (int b = 0; b < machines[m].buttons.size(); b++) {
+                int complement = machines[m].ind_lights ^ machines[m].buttons[b];
+                for (int bc = b + 1; bc < machines[m].buttons.size(); bc++) {
+                    if (bc == complement) {
+                        machines[m].min_presses = 2;
+                        break;
+                    }
+                }
+                if (machines[m].min_presses == 2) {
+                    break;
+                }
+            }
+            if (machines[m].min_presses == 2) {
+                continue;
+            }
+
+            // TODO generalize for 3, 4, .... n button press solutions
+        }
 
         input_file.close();
     } else {
