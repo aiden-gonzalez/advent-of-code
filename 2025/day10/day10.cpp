@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <unordered_set>
 
 /*
     Across the hall is a large factory. The elves have plenty of time to decorate.
@@ -69,7 +70,7 @@ class Machine {
         Machine (int il, std::vector<int> bs) {
             ind_lights = il;
             buttons = bs;
-            min_presses = 0;
+            min_presses = -1;
         }
 
         int ind_lights;
@@ -87,6 +88,71 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
     }
     std::cout << " -> " << m.min_presses;
     return os;
+}
+
+int solve_machine(int target, std::vector<int> buttons, std::unordered_set<int> ignore) {
+    std::cout << "solve_machine call: Looking to make " << target << " with buttons";
+    for (int i = 0; i < buttons.size(); i++) {
+        if (ignore.count(i) == 0) {
+            std::cout << " " << buttons[i];
+        }
+    }
+    std::cout << " (ignoring indexes";
+    for (const auto& i: ignore) {
+        std::cout << " " << i;
+    }
+    std::cout << ")\n";
+
+    // Base case: all numbers are ignored
+    if (buttons.size() == ignore.size()) {
+        std::cout << "All numbers are ignored, returning 0.\n";
+        return 0;
+    }
+
+    // Base case: 1 more press works
+    for (int b = 0; b < buttons.size(); b++) {
+        if (ignore.count(b) == 0 && buttons[b] == target) {
+            std::cout << "Found a 1 button solution: " << buttons[b] << '\n';
+            return 1;
+        }
+    }
+
+    // Find potential 2 press solution
+    for (int b = 0; b < buttons.size(); b++) {
+        if (ignore.count(b) == 1) {
+            continue;
+        }
+        int complement = target ^ buttons[b];
+        for (int bc = b; bc < buttons.size(); bc++) {
+            if (buttons[bc] == complement) {
+                std::cout << "Found two press solution: " << buttons[b] << " and " << buttons[bc] << '\n';
+                return 2;
+            }
+        }
+    }
+
+    // Recursive case: Take out a button and try two sum with the rest
+    for (int b = 0; b < buttons.size(); b++) {
+        if (ignore.count(b) == 1) {
+            continue;
+        }
+
+        int complement = target ^ buttons[b];
+        ignore.insert(b);
+        std::cout << "Doing recursion with complement " << complement << " and additionally ignoring index " << b << '\n';
+        int result = solve_machine(complement, buttons, ignore);
+        ignore.erase(b);
+
+        // If we found a solution
+        if (result > -1) {
+            std::cout << "Returning 1 + " << result << '\n';
+            return 1 + result;
+        }
+    }
+
+    // Didn't find a solution
+    std::cout << "Didn't find a solution, returning -1.\n";
+    return -1;
 }
 
 int main() {
@@ -142,8 +208,10 @@ int main() {
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
+            std::cout << "Solving machine " << m + 1 << "...\n";
             // Zero presses isn't part of the input, but theoretically possible
             if (machines[m].ind_lights == 0) {
+                std::cout << "0 button solution\n";
                 machines[m].min_presses = 0;
                 continue;
             }
@@ -151,6 +219,7 @@ int main() {
             // Check for one press solution
             for (int b = 0; b < machines[m].buttons.size(); b++) {
                 if (machines[m].buttons[b] == machines[m].ind_lights) {
+                    std::cout << "1 button solution: " << machines[m].buttons[b] << '\n';
                     machines[m].min_presses = 1;
                     break;
                 }
@@ -159,24 +228,13 @@ int main() {
                 continue;
             }
 
-            // For two presses and up: two-sum style solution
-            for (int b = 0; b < machines[m].buttons.size(); b++) {
-                int complement = machines[m].ind_lights ^ machines[m].buttons[b];
-                for (int bc = b + 1; bc < machines[m].buttons.size(); bc++) {
-                    if (bc == complement) {
-                        machines[m].min_presses = 2;
-                        break;
-                    }
-                }
-                if (machines[m].min_presses == 2) {
-                    break;
-                }
-            }
-            if (machines[m].min_presses == 2) {
-                continue;
-            }
+            // For two presses and up: recursive two-sum style solution
+            machines[m].min_presses = solve_machine(machines[m].ind_lights, machines[m].buttons, std::unordered_set<int>());
 
-            // TODO generalize for 3, 4, .... n button press solutions
+            if (machines[m].min_presses == -1) {
+                std::cout << "Warning: Couldn't solve!\n";
+            }
+            std::cout << '\n';
         }
 
         input_file.close();
@@ -185,5 +243,11 @@ int main() {
         return 1;
     }
 
+    std::cout << '\n';
+
+    for (int i = 0; i < machines.size(); i++) {
+        std::cout << machines[i] << '\n';
+    }
+    
     return 0;
 }
