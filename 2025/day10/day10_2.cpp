@@ -320,6 +320,10 @@ int main() {
                 jolt_start = comma_ind + 1;
                 comma_ind = line.find(',', jolt_start + 1);
             }
+            // Read last joltage
+            int last_jolt_num = std::stoi(line.substr(jolt_start, joltages_end - jolt_start));
+            joltages.push_back(last_jolt_num);
+
             machines.push_back(Machine(indicator, buttons, joltages));
         }
 
