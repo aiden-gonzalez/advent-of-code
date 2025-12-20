@@ -139,7 +139,7 @@ std::vector<int> get_complement(std::vector<int> base, const Button &button) {
     return base;
 }
 
-bool result_too_large(std::vector<int> result, std::vector<int> target) {
+bool result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
     // Complain and return true if they aren't the same size
     if (result.size() != target.size()) {
         std::cout << "Running result_too_large with different size inputs!!";
@@ -148,6 +148,16 @@ bool result_too_large(std::vector<int> result, std::vector<int> target) {
 
     for (int i = 0; i < result.size(); i++) {
         if (result[i] > target[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool complement_too_small(const std::vector<int>& complement) {
+    for (const int i : complement) {
+        if (i < 0) {
             return true;
         }
     }
@@ -179,19 +189,49 @@ std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &b
 
 bool solve_one(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     for (int b = 0; b < buttons.size(); b++) {
-        // If button is not ignored
-        if (ignore.count(b) == 0) {
-            // Press button until you either get the solution or one of the numbers is too large
-            std::vector<int> result(target.size());
-            std::vector<Button> buttons_to_press = {buttons[b]};
-            while (!result_too_large(result, target)) {
-                result = press_buttons(buttons_to_press, result.size());
-                if (result == target) {
-                    std::cout << "Found a 1 button solution: " << buttons[b] << " pressed " << buttons_to_press.size() << " times \n";
+        // If button is ignored, skip it
+        if (ignore.count(b) == 1) {
+            continue;
+        }
+
+        // Press button until you either get the solution or one of the numbers is too large
+        std::vector<int> result(target.size());
+        std::vector<Button> buttons_to_press = {buttons[b]};
+        while (!result_too_large(result, target)) {
+            result = press_buttons(buttons_to_press, result.size());
+            if (result == target) {
+                std::cout << "Found a 1 button solution: " << buttons[b] << " pressed " << buttons_to_press.size() << " times \n";
+                return true;
+            }
+            buttons_to_press.push_back(buttons[b]);
+        }
+    }
+
+    return false;
+}
+
+bool solve_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
+    for (int b = 0; b < buttons.size(); b++) {
+        if (ignore.count(b) == 1) {
+            continue;
+        }
+
+        // Complement using this button until we bottom-out an index
+        std::vector<int> complement = get_complement(target, buttons[b]);
+        int num_complements = 1;
+        while (!complement_too_small(complement)) {
+            for (int bc = b + 1; bc < buttons.size(); bc++) {
+                if (ignore.count(bc) == 1) {
+                    continue;
+                }
+
+                if (solve_one(complement, buttons, ignore)) {
+                    std::cout << "Found two press solution: " << buttons[b] << " pressed " << num_complements << " times and " << buttons[bc] << '\n';
                     return true;
                 }
-                buttons_to_press.push_back(buttons[b]);
             }
+            complement = get_complement(complement, buttons[b]);
+            num_complements++;
         }
     }
 
@@ -217,27 +257,14 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
         return 0;
     }
 
-    // Base case: 1 button works
+    // Does 1 button work?
     if (solve_one(target, buttons, ignore)) {
         return 1;
     }
 
-    // Find potential 2 press solution
-    for (int b = 0; b < buttons.size(); b++) {
-        if (ignore.count(b) == 1) {
-            continue;
-        }
-        std::vector<int> complement = get_complement(target, buttons[b]);
-        for (int bc = b; bc < buttons.size(); bc++) {
-            if (ignore.count(bc) == 1) {
-                continue;
-            }
-
-            if (solve_one(complement, buttons, ignore)) {
-                std::cout << "Found two press solution: " << buttons[b] << " and " << buttons[bc] << '\n';
-                return 2;
-            }
-        }
+    // Does 2 buttons work?
+    if (solve_two(target, buttons, ignore)) {
+        return 2;
     }
 
     return -1;
