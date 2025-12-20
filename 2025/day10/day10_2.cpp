@@ -5,73 +5,44 @@
 #include <vector>
 
 /*
-    Across the hall is a large factory. The elves have plenty of time to decorate.
-    All the machines are offline, and they can't figure out the initialization
-    procedure.
+    Part 2:
 
-    There is a manual, but the section detailing initialization was eaten by a Shiba
-    Inu.  All that remains are some indicator light diagrams, button wiring schematics,
-    and joltage requirements for each machine.
+    The machines are starting to come online. But joltage requirements matter now.
 
-    Example given.
+    Each machine needs to be configured to the exact specified joltage levels to
+    function properly.  Below the buttons on each machine is a big lever that you
+    can use to switch the buttons from configuring indicator lights to increasing
+    joltage levels (ignore the indicator light diagrams).
 
-    Describes one machine per line.  Each line contains a single indicator light
-    diagram in [square brackets], one or more button wiring schematics in
-    (parentheses), and joltage requirements in {curly braces}.
+    Each machine has a set of numeric counters tracking its joltage levels, one
+    counter per joltage requirement.  They are initially set to zero.
 
-    To start a machine, indicator lights must match those shown in the diagram.
-    "." is off and "#" is on.  The machine has the number of lights shown, but
-    they are all initially off.  [.##.] means the machine has 4 lights that are
-    initially off and the goal is to simultaneously configure the first light to be
-    off, second to be on, third to be on, and fourth to be off.
+    {3, 5, 4, 7} means the machine has 4 counters which are intially set to 0.
+    Goal is to simultaneously configure the first counter to be 3, second to be
+    5, third to be 4, and fourth to be 7.
 
-    You can toggle the state of indicator lights by pushing any of the listed buttons.
-    Each button lists what light it toggles. 0 is the first light, 1 is the second,
-    etc.  When you push a button, each light gets toggled.  You have to push each
-    button an integer number of times.  No 0.5, no negative presses.
+    Button wiring is still relevant. Each button now indicates which counter
+    it affects.  0 means the first counter, 1 the second, and so on.  When you
+    push a button, each listed timer is increased by 1.
 
-    Because none of the machines are running, the joltage requirements can be ignored.
+    So a button wiring schematic like (1, 3) means each time you push that button,
+    the second and fourth counters would increase by 1. If the current joltage levels
+    were {0, 1, 2, 3}, pushing the button would change them to be {0, 2, 2, 4}.
 
-    You can push a button as many times as you like. But to save on time, you need to
-    determine the fewest total presses required to correctly configure all indicator
-    lights for all machines in your list.
+    You can push each button as many times as you like. however, your finger is getting
+    sore. You will need to determine the fewest possible presses required to correctly
+    configure each machines joltage level counters.
 
-    First machine example discussed. And second and third.
-
-    What is the fewest button presses required to correctly configure the indicator
-    lights on all of the machines (sum up all machines)?
-
-    [....] -> [.#.#] -> [.##.].  No need to hit (0, 1) twice. In fact, there is no need
-    to press anything more than once. Pressing anything twice is the same as not
-    pressing it at all.  Three times is the same as pressing it once, etc. No repeats.
-
-    So, you could try every combination of one button. Then two. Then three. Etc until
-    you get a combo that works. Not exactly sure how I'll set up the loop to be able
-    to do that, but I think I can do it.
-    - Actually, here's a more clever, "two sum" sort of way to do it.  If it's one,
-      then the lights will directly match one of the buttons.  light = button.
-    - Then if it's two presses, in a two sum sense you could see if for each button,
-      the target minus that button equals another button
-    - For three sum, you'll need to pick a button then do two sum with the rest of
-      the possible buttons and the target end configuration. And then do that for
-      each button.
-    - For four sum, you'll need to pick every combo of two buttons possible and
-      then do two sum for the remaining.
-    - For five sum, you'll need to pick every combo of three possible and then do
-      two sum with the remaining.
-    So on and so forth. Simple in theory, but to actually implement a generalized
-    loop of this might be tricky. But not impossible.
-
-    If button_1 ^ button_2 = ind_lights.  For example 10 ^ 12 = 6.  Then,
-    10 = 6 ^ 12. And therein lies your two-sum.
+    Example input again.
 */
 
 class Machine {
     public:
-        Machine (int il, const std::vector<int> &bs) {
+        Machine (const int il, const std::vector<int> &bs) {
             ind_lights = il;
             buttons = bs;
             min_presses = -1;
+            joltage =
         }
 
         int ind_lights;
