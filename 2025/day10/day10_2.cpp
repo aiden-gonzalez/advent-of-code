@@ -36,37 +36,99 @@
     Example input again.
 */
 
+class Button {
+public:
+    Button (std::vector<int> nums) {
+        indexes = nums;
+    }
+
+    std::vector<int> indexes;
+
+    // Friend function: stream operator overload
+    friend std::ostream & operator<<(std::ostream & os, const Button & b);
+
+    bool operator==(const Button& other) const {
+        return indexes == other.indexes;
+    }
+};
+
+std::ostream & operator<<(std::ostream & os, Button const & b) {
+    os << "(";
+    for (int i = 0; i < b.indexes.size() - 1; i++) {
+        os << b.indexes[i] << ", ";
+    }
+    os << b.indexes[b.indexes.size() - 1] << ")";
+    return os;
+}
+
+template <>
+struct std::hash<Button> {
+    std::size_t operator()(const Button& b) const noexcept {
+        std::size_t result = 0;
+        for (int i = 0; i < b.indexes.size(); i++) {
+            const std::size_t hash = std::hash<int>()(b.indexes[i]);
+            result = result ^ hash << i;
+        }
+        return result;
+    }
+};
+
 class Machine {
     public:
-        Machine (const int il, const std::vector<int> &bs) {
+        Machine (const int il, const std::vector<Button> &bs, const std::vector<int> &js) {
             ind_lights = il;
             buttons = bs;
             min_presses = -1;
-            joltage =
+            joltages = js;
         }
 
         int ind_lights;
-        std::vector<int> buttons;
+        std::vector<Button> buttons;
         int min_presses;
+        std::vector<int> joltages;
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Machine & m);
 };
 
 std::ostream & operator<<(std::ostream & os, Machine const & m) {
-    os << "Machine: [" << m.ind_lights << "]";
-    for (int i = 0; i < m.buttons.size(); i++) {
-        std::cout << " (" << m.buttons[i] << ")";
+    os << "Machine: [" << m.ind_lights << "] ";
+    for (const auto & button : m.buttons) {
+        os << button;
     }
-    std::cout << " -> " << m.min_presses;
+    for (int joltage : m.joltages) {
+        os << "{" << joltage << "}";
+    }
+    os << " -> " << m.min_presses;
     return os;
 }
 
-int solve_one_or_two(const int target, const std::vector<int> &buttons, const std::unordered_set<int> &ignore) {
+std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
+    // Initialize empty result array of given size
+    std::vector<int> presses(result_size);
+
+    // For each button, increment the referenced indexes
+    for (const auto & button : buttons) {
+        for (const int ind : button.indexes) {
+            presses[ind]++;
+        }
+    }
+
+    return presses;
+}
+
+std::vector<int> get_complement(std::vector<int> base, const Button &button) {
+    for (const int ind : button.indexes) {
+        base[ind]--;
+    }
+    return base;
+}
+
+int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons";
     for (int i = 0; i < buttons.size(); i++) {
         if (ignore.count(i) == 0) {
-            std::cout << " " << buttons[i];
+            std::cout << buttons[i];
         }
     }
     std::cout << " (ignoring indexes";
@@ -81,11 +143,15 @@ int solve_one_or_two(const int target, const std::vector<int> &buttons, const st
         return 0;
     }
 
-    // Base case: 1 more press works
+    // Base case: 1 press works
     for (int b = 0; b < buttons.size(); b++) {
-        if (ignore.count(b) == 0 && buttons[b] == target) {
-            std::cout << "Found a 1 button solution: " << buttons[b] << '\n';
-            return 1;
+        // If button is not ignored
+        if (ignore.count(b) == 0) {
+            // If pressing the button produces the target result
+            if (press_buttons({buttons[b]}, target.size()) == target) {
+                std::cout << "Found a 1 button solution: " << buttons[b] << "\n";
+                return 1;
+            }
         }
     }
 
@@ -94,9 +160,9 @@ int solve_one_or_two(const int target, const std::vector<int> &buttons, const st
         if (ignore.count(b) == 1) {
             continue;
         }
-        int complement = target ^ buttons[b];
+        std::vector<int> complement = get_complement(target, buttons[b]);
         for (int bc = b; bc < buttons.size(); bc++) {
-            if (buttons[bc] == complement) {
+            if (press_buttons({buttons[bc]}, complement.size()) == complement) {
                 std::cout << "Found two press solution: " << buttons[b] << " and " << buttons[bc] << '\n';
                 return 2;
             }
@@ -106,7 +172,7 @@ int solve_one_or_two(const int target, const std::vector<int> &buttons, const st
     return -1;
 }
 
-void get_subsets_helper(const std::vector<int> &buttons, std::vector<std::unordered_set<int>> &sets, const int k, const int idx, std::unordered_set<int> subset) {
+void get_subsets_helper(const std::vector<Button> &buttons, std::vector<std::unordered_set<Button>> &sets, const int k, const int idx, std::unordered_set<Button> subset) {
     if (subset.size() == k) {
         sets.push_back(subset);
         return;
@@ -118,16 +184,16 @@ void get_subsets_helper(const std::vector<int> &buttons, std::vector<std::unorde
     }
 }
 
-std::vector<std::unordered_set<int>> get_subsets(const std::vector<int> &buttons, const int k) {
-    std::vector<std::unordered_set<int>> sets = {};
+std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &buttons, const int k) {
+    std::vector<std::unordered_set<Button>> sets = {};
     get_subsets_helper(buttons, sets, k, 0, {});
     return sets;
 }
 
-int solve_machine(const int target, const std::vector<int> &buttons) {
-    std::cout << "solve_machine call: Looking to make " << target << " with buttons";
-    for (int i = 0; i < buttons.size(); i++) {
-        std::cout << " " << buttons[i];
+int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
+    std::cout << "solve_machine call: Looking to make " << target << " with buttons ";
+    for (const auto & button : buttons) {
+        std::cout << button;
     }
     std::cout << "\n";
 
@@ -146,7 +212,7 @@ int solve_machine(const int target, const std::vector<int> &buttons) {
             continue;
         }
 
-        const int complement = target ^ buttons[b];
+        std::vector<int> complement = get_complement(target, buttons[b]);
         ignore.insert(b);
         const int result = solve_one_or_two(complement, buttons, ignore);
         ignore.erase(b);
@@ -161,15 +227,12 @@ int solve_machine(const int target, const std::vector<int> &buttons) {
     // Now try combinations of four or greater
     for (int k = 4; k <= buttons.size(); k++) {
         // Get all subsets of size k
-        std::vector<std::unordered_set<int>> subsets = get_subsets(buttons, k);
+        std::vector<std::unordered_set<Button>> subsets = get_subsets(buttons, k);
 
         // Check each subset for a solution
         for (int s = 0; s < subsets.size(); s++) {
             // Press all the buttons in the subset
-            int result = 0;
-            for (const auto& num : subsets[s]) {
-                result = result ^ num;
-            }
+            std::vector<int> result = press_buttons(subsets[s], target.size());
 
             // If the result equals the target, return the subset size
             if (result == target) {
@@ -191,7 +254,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -206,9 +269,9 @@ int main() {
             }
 
             // Read buttons
-            std::vector<int> buttons;
+            std::vector<Button> buttons;
             int button_start = line.find('(');
-            int button_wires = 0;
+            std::vector<int> button_wires;
             while (button_start != std::string::npos) {
                 // Read wires for button
                 int wire_start = button_start + 1;
@@ -216,28 +279,41 @@ int main() {
                 int button_end = line.find(')', wire_start + 1);
                 while (comma_ind < button_end && comma_ind != std::string::npos) {
                     int wire_num = std::stoi(line.substr(wire_start, comma_ind - wire_start));
-                    button_wires = button_wires | 1 << (lights.size() - wire_num - 1);
+                    button_wires.push_back(wire_num);
                     wire_start = comma_ind + 1;
                     comma_ind = line.find(',', wire_start + 1);
                 }
                 // Read last wire
                 int last_wire_num = std::stoi(line.substr(wire_start, button_end - wire_start));
-                button_wires = button_wires | 1 << (lights.size() - last_wire_num - 1);
+                button_wires.push_back(last_wire_num);
 
                 // Add to machine buttons
-                buttons.push_back(button_wires);
+                buttons.push_back(Button(button_wires));
                 
                 // Seek to next button
                 button_start = line.find('(', button_end + 1);
-                button_wires = 0;
+                button_wires = {};
             }
-            machines.push_back(Machine(indicator, buttons));
+
+            // Read joltages
+            std::vector<int> joltages;
+            int joltages_start = line.find('{');
+            int joltages_end = line.find('}');
+            int jolt_start = joltages_start + 1;
+            int comma_ind = line.find(',', jolt_start);
+            while (comma_ind < joltages_end  && comma_ind != std::string::npos) {
+                int jolt_num = std::stoi(line.substr(jolt_start, comma_ind - jolt_start));
+                joltages.push_back(jolt_num);
+                jolt_start = comma_ind + 1;
+                comma_ind = line.find(',', jolt_start + 1);
+            }
+            machines.push_back(Machine(indicator, buttons, joltages));
         }
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
             std::cout << "Solving machine " << m + 1 << "...\n";
-            machines[m].min_presses = solve_machine(machines[m].ind_lights, machines[m].buttons);
+            machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve!\n";
             }
