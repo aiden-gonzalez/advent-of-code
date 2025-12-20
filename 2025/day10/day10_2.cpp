@@ -238,24 +238,30 @@ bool solve_two(const std::vector<int> &target, const std::vector<Button> &button
     return false;
 }
 
-int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
-    std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons ";
-    for (int i = 0; i < buttons.size(); i++) {
-        if (ignore.count(i) == 0) {
-            std::cout << buttons[i] << ' ';
-        }
-    }
-    std::cout << "(ignoring indexes";
-    for (const auto& i: ignore) {
-        std::cout << " " << i;
-    }
-    std::cout << ")\n";
+bool solve_three(const std::vector<int> &target, const std::vector<Button> &buttons, std::unordered_set<int> &ignore) {
+    for (int b = 0; b < buttons.size(); b++) {
+        ignore.insert(b);
 
-    // Base case: all numbers are ignored
-    if (buttons.size() == ignore.size()) {
-        std::cout << "All numbers are ignored, returning 0.\n";
-        return 0;
+        // Complement using this button until we bottom-out an index
+        std::vector<int> complement = get_complement(target, buttons[b]);
+        int num_complements = 1;
+        while (!complement_too_small(complement)) {
+            if (solve_two(complement, buttons, ignore)) {
+                std::cout << "Found three press solution: " << buttons[b] << " pressed " << num_complements << " times and prior two press sol" << '\n';
+                return true;
+            }
+            complement = get_complement(complement, buttons[b]);
+            num_complements++;
+        }
+        ignore.erase(b);
     }
+
+    return false;
+}
+
+int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
+    // Initialize empty ignore array for later use
+    std::unordered_set<int> ignore = {};
 
     // Does 1 button work?
     if (solve_one(target, buttons, ignore)) {
@@ -267,35 +273,9 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
         return 2;
     }
 
-    return -1;
-}
-
-int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
-    // Initialize empty ignore array for later use
-    std::unordered_set<int> ignore = {};
-
-    // See if a simple one or two button solution would work
-    if (const int sol = solve_one_or_two(target, buttons, ignore); sol > -1) {
-        return sol;
-    }
-
-    std::cout << "One or two button solution not possible.  Trying three buttons...\n";
-
     // Three button solution
-    for (int b = 0; b < buttons.size(); b++) {
-        ignore.insert(b);
-        // Complement using this button until we bottom-out an index
-        std::vector<int> complement = get_complement(target, buttons[b]);
-        int num_complements = 1;
-        while (!complement_too_small(complement)) {
-            if (solve_one_or_two(complement, buttons, ignore) > -1) {
-                std::cout << "Found three press solution: " << buttons[b] << " pressed " << num_complements << " times and prior two press sol" << '\n';
-                return 3;
-            }
-            complement = get_complement(complement, buttons[b]);
-            num_complements++;
-        }
-        ignore.erase(b);
+    if (solve_three(target, buttons, ignore)) {
+        return 3;
     }
 
     // Now try combinations of four or greater
