@@ -135,18 +135,19 @@ int solve_one_or_two(const int target, const std::vector<int> &buttons, const st
     return -1;
 }
 
-int solve_machine(const int target, const std::vector<int> &buttons, std::unordered_set<int> ignore) {
+// std::vector<std::unordered_set<int>> get_sets() {
+//     re
+// }
+
+int solve_machine(const int target, const std::vector<int> &buttons) {
     std::cout << "solve_machine call: Looking to make " << target << " with buttons";
     for (int i = 0; i < buttons.size(); i++) {
-        if (ignore.count(i) == 0) {
-            std::cout << " " << buttons[i];
-        }
+        std::cout << " " << buttons[i];
     }
-    std::cout << " (ignoring indexes";
-    for (const auto& i: ignore) {
-        std::cout << " " << i;
-    }
-    std::cout << ")\n";
+    std::cout << "\n";
+
+    // Initialize empty ignore array for later use
+    std::unordered_set<int> ignore = {};
 
     // See if a simple one or two button solution would work
     const int one_or_two_sol = solve_one_or_two(target, buttons, ignore);
@@ -154,7 +155,7 @@ int solve_machine(const int target, const std::vector<int> &buttons, std::unorde
         return one_or_two_sol;
     }
 
-    // Advanced case: Try combinations
+    // Three sum
     for (int b = 0; b < buttons.size(); b++) {
         if (ignore.count(b) == 1) {
             continue;
@@ -231,28 +232,7 @@ int main() {
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
             std::cout << "Solving machine " << m + 1 << "...\n";
-            // Zero presses isn't part of the input, but theoretically possible
-            if (machines[m].ind_lights == 0) {
-                std::cout << "0 button solution\n";
-                machines[m].min_presses = 0;
-                continue;
-            }
-
-            // Check for one press solution
-            for (int b = 0; b < machines[m].buttons.size(); b++) {
-                if (machines[m].buttons[b] == machines[m].ind_lights) {
-                    std::cout << "1 button solution: " << machines[m].buttons[b] << '\n';
-                    machines[m].min_presses = 1;
-                    break;
-                }
-            }
-            if (machines[m].min_presses == 1) {
-                continue;
-            }
-
-            // For two presses and up: recursive two-sum style solution
-            machines[m].min_presses = solve_machine(machines[m].ind_lights, machines[m].buttons, std::unordered_set<int>());
-
+            machines[m].min_presses = solve_machine(machines[m].ind_lights, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve!\n";
             }
