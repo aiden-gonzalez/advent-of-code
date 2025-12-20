@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 /*
     Across the hall is a large factory. The elves have plenty of time to decorate.
@@ -90,8 +91,8 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
     return os;
 }
 
-int solve_machine(int target, std::vector<int> buttons, std::unordered_set<int> ignore) {
-    std::cout << "solve_machine call: Looking to make " << target << " with buttons";
+int solve_one_or_two(const int target, const std::vector<int> &buttons, const std::unordered_set<int> &ignore) {
+    std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons";
     for (int i = 0; i < buttons.size(); i++) {
         if (ignore.count(i) == 0) {
             std::cout << " " << buttons[i];
@@ -131,16 +132,37 @@ int solve_machine(int target, std::vector<int> buttons, std::unordered_set<int> 
         }
     }
 
-    // Recursive case: Take out a button and try two sum with the rest
+    return -1;
+}
+
+int solve_machine(const int target, const std::vector<int> &buttons, std::unordered_set<int> ignore) {
+    std::cout << "solve_machine call: Looking to make " << target << " with buttons";
+    for (int i = 0; i < buttons.size(); i++) {
+        if (ignore.count(i) == 0) {
+            std::cout << " " << buttons[i];
+        }
+    }
+    std::cout << " (ignoring indexes";
+    for (const auto& i: ignore) {
+        std::cout << " " << i;
+    }
+    std::cout << ")\n";
+
+    // See if a simple one or two button solution would work
+    const int one_or_two_sol = solve_one_or_two(target, buttons, ignore);
+    if (one_or_two_sol > -1) {
+        return one_or_two_sol;
+    }
+
+    // Advanced case: Try combinations
     for (int b = 0; b < buttons.size(); b++) {
         if (ignore.count(b) == 1) {
             continue;
         }
 
-        int complement = target ^ buttons[b];
+        const int complement = target ^ buttons[b];
         ignore.insert(b);
-        std::cout << "Doing recursion with complement " << complement << " and additionally ignoring index " << b << '\n';
-        int result = solve_machine(complement, buttons, ignore);
+        const int result = solve_one_or_two(complement, buttons, ignore);
         ignore.erase(b);
 
         // If we found a solution
