@@ -199,13 +199,13 @@ bool solve_one(const std::vector<int> &target, const std::vector<Button> &button
 }
 
 int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
-    std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons";
+    std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons ";
     for (int i = 0; i < buttons.size(); i++) {
         if (ignore.count(i) == 0) {
-            std::cout << buttons[i];
+            std::cout << buttons[i] << ' ';
         }
     }
-    std::cout << " (ignoring indexes";
+    std::cout << "(ignoring indexes";
     for (const auto& i: ignore) {
         std::cout << " " << i;
     }
@@ -253,6 +253,8 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
         return one_or_two_sol;
     }
 
+    std::cout << "One or two button solution not possible.  Trying three buttons...\n";
+
     // Three button solution
     for (int b = 0; b < buttons.size(); b++) {
         if (ignore.count(b) == 1) {
@@ -277,9 +279,9 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
         std::vector<std::unordered_set<Button>> subsets = get_subsets(buttons, k);
 
         // Check each subset for a solution
-        for (int s = 0; s < subsets.size(); s++) {
+        for (const auto & subset : subsets) {
             // Press all the buttons in the subset
-            std::vector<int> result = press_buttons(subsets[s], target.size());
+            std::vector<int> result = press_buttons(subset, target.size());
 
             // If the result equals the target, return the subset size
             if (result == target) {
@@ -303,7 +305,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("super_simple_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -365,7 +367,7 @@ int main() {
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
-            std::cout << "Solving machine " << m + 1 << "...\n";
+            std::cout << "Solving machine: " << machines[m] << "...\n";
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve!\n";
@@ -376,7 +378,6 @@ int main() {
         // Sum up the solutions
         int sum = 0;
         for (auto & machine : machines) {
-            std::cout << machine << '\n';
             sum += machine.min_presses;
         }
         std::cout << "Total presses: " << sum << '\n';
