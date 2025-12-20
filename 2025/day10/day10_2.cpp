@@ -36,6 +36,8 @@
     Example input again.
 */
 
+// BUTTON CODE
+
 class Button {
 public:
     Button (std::vector<int> nums) {
@@ -73,6 +75,8 @@ struct std::hash<Button> {
     }
 };
 
+// MACHINE CODE
+
 class Machine {
     public:
         Machine (const int il, const std::vector<Button> &bs, const std::vector<int> &js) {
@@ -103,18 +107,20 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
     return os;
 }
 
+// BUTTON PRESSING FUNCTIONS
+
 std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
     // Initialize empty result array of given size
-    std::vector<int> presses(result_size);
+    std::vector<int> result(result_size);
 
     // For each button, increment the referenced indexes
     for (const auto & button : buttons) {
         for (const int ind : button.indexes) {
-            presses[ind]++;
+            result[ind]++;
         }
     }
 
-    return presses;
+    return result;
 }
 
 std::vector<int> get_complement(std::vector<int> base, const Button &button) {
@@ -123,6 +129,28 @@ std::vector<int> get_complement(std::vector<int> base, const Button &button) {
     }
     return base;
 }
+
+// SUBSET FUNCTIONS
+
+void get_subsets_helper(const std::vector<Button> &buttons, std::vector<std::unordered_set<Button>> &sets, const int k, const int idx, std::unordered_set<Button> subset) {
+    if (subset.size() == k) {
+        sets.push_back(subset);
+        return;
+    }
+    for (int i = idx; i < buttons.size(); i++) {
+        subset.insert(buttons[i]);
+        get_subsets_helper(buttons, sets, k, i + 1, subset);
+        subset.erase(buttons[i]);
+    }
+}
+
+std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &buttons, const int k) {
+    std::vector<std::unordered_set<Button>> sets = {};
+    get_subsets_helper(buttons, sets, k, 0, {});
+    return sets;
+}
+
+// SOLVING FUNCTIONS
 
 int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons";
@@ -170,24 +198,6 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
     }
 
     return -1;
-}
-
-void get_subsets_helper(const std::vector<Button> &buttons, std::vector<std::unordered_set<Button>> &sets, const int k, const int idx, std::unordered_set<Button> subset) {
-    if (subset.size() == k) {
-        sets.push_back(subset);
-        return;
-    }
-    for (int i = idx; i < buttons.size(); i++) {
-        subset.insert(buttons[i]);
-        get_subsets_helper(buttons, sets, k, i + 1, subset);
-        subset.erase(buttons[i]);
-    }
-}
-
-std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &buttons, const int k) {
-    std::vector<std::unordered_set<Button>> sets = {};
-    get_subsets_helper(buttons, sets, k, 0, {});
-    return sets;
 }
 
 int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
@@ -245,6 +255,8 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
     std::cout << "Didn't find a solution, returning -1.\n";
     return -1;
 }
+
+// DRIVER CODE
 
 int main() {
     std::string line;
@@ -322,9 +334,9 @@ int main() {
 
         // Sum up the solutions
         int sum = 0;
-        for (int m = 0; m < machines.size(); m++) {
-            std::cout << machines[m] << '\n';
-            sum += machines[m].min_presses;
+        for (auto & machine : machines) {
+            std::cout << machine << '\n';
+            sum += machine.min_presses;
         }
         std::cout << "Total presses: " << sum << '\n';
 
@@ -333,8 +345,6 @@ int main() {
         std::cout << "Unable to open file";
         return 1;
     }
-
-    std::cout << '\n';
     
     return 0;
 }
