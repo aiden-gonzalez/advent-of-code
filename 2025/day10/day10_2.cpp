@@ -110,7 +110,7 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
 
 // BUTTON PRESSING FUNCTIONS
 
-std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
+std::vector<int> press_buttons(const std::vector<Button> &buttons, const int result_size) {
     // Initialize empty result array of given size
     std::vector<int> result(result_size);
 
@@ -124,11 +124,35 @@ std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const 
     return result;
 }
 
+std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
+    std::vector<Button> buttons_vec;
+    for (const auto & button : buttons) {
+        buttons_vec.push_back(button);
+    }
+    return press_buttons(buttons_vec, result_size);
+}
+
 std::vector<int> get_complement(std::vector<int> base, const Button &button) {
     for (const int ind : button.indexes) {
         base[ind]--;
     }
     return base;
+}
+
+bool result_too_large(std::vector<int> result, std::vector<int> target) {
+    // Complain and return true if they aren't the same size
+    if (result.size() != target.size()) {
+        std::cout << "Running result_too_large with different size inputs!!";
+        return true;
+    }
+
+    for (int i = 0; i < result.size(); i++) {
+        if (result[i] > target[i]) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // SUBSET FUNCTIONS
@@ -153,6 +177,27 @@ std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &b
 
 // SOLVING FUNCTIONS
 
+bool solve_one(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
+    for (int b = 0; b < buttons.size(); b++) {
+        // If button is not ignored
+        if (ignore.count(b) == 0) {
+            // Press button until you either get the solution or one of the numbers is too large
+            std::vector<int> result(target.size());
+            std::vector<Button> buttons_to_press = {buttons[b]};
+            while (!result_too_large(result, target)) {
+                result = press_buttons(buttons_to_press, result.size());
+                if (result == target) {
+                    std::cout << "Found a 1 button solution: " << buttons[b] << " pressed " << buttons_to_press.size() << " times \n";
+                    return true;
+                }
+                buttons_to_press.push_back(buttons[b]);
+            }
+        }
+    }
+
+    return false;
+}
+
 int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     std::cout << "solve_one_or_two call: Looking to make " << target << " with buttons";
     for (int i = 0; i < buttons.size(); i++) {
@@ -172,16 +217,9 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
         return 0;
     }
 
-    // Base case: 1 press works
-    for (int b = 0; b < buttons.size(); b++) {
-        // If button is not ignored
-        if (ignore.count(b) == 0) {
-            // If pressing the button produces the target result
-            if (press_buttons({buttons[b]}, target.size()) == target) {
-                std::cout << "Found a 1 button solution: " << buttons[b] << "\n";
-                return 1;
-            }
-        }
+    // Base case: 1 button works
+    if (solve_one(target, buttons, ignore)) {
+        return 1;
     }
 
     // Find potential 2 press solution
@@ -191,7 +229,11 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
         }
         std::vector<int> complement = get_complement(target, buttons[b]);
         for (int bc = b; bc < buttons.size(); bc++) {
-            if (press_buttons({buttons[bc]}, complement.size()) == complement) {
+            if (ignore.count(bc) == 1) {
+                continue;
+            }
+
+            if (solve_one(complement, buttons, ignore)) {
                 std::cout << "Found two press solution: " << buttons[b] << " and " << buttons[bc] << '\n';
                 return 2;
             }
@@ -202,12 +244,6 @@ int solve_one_or_two(const std::vector<int> &target, const std::vector<Button> &
 }
 
 int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
-    std::cout << "solve_machine call: Looking to make " << target << " with buttons ";
-    for (const auto & button : buttons) {
-        std::cout << button;
-    }
-    std::cout << "\n";
-
     // Initialize empty ignore array for later use
     std::unordered_set<int> ignore = {};
 
@@ -217,7 +253,7 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
         return one_or_two_sol;
     }
 
-    // Three sum
+    // Three button solution
     for (int b = 0; b < buttons.size(); b++) {
         if (ignore.count(b) == 1) {
             continue;
@@ -230,8 +266,8 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
 
         // If we found a solution
         if (result > -1) {
-            std::cout << "Returning 1 + " << result << '\n';
-            return 1 + result;
+            std::cout << "Three button solution found \n";
+            return 3;
         }
     }
 
@@ -328,14 +364,14 @@ int main() {
         }
 
         // Find the solution for each machine
-        // for (int m = 0; m < machines.size(); m++) {
-        //     std::cout << "Solving machine " << m + 1 << "...\n";
-        //     machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
-        //     if (machines[m].min_presses == -1) {
-        //         std::cout << "Warning: Couldn't solve!\n";
-        //     }
-        //     std::cout << '\n';
-        // }
+        for (int m = 0; m < machines.size(); m++) {
+            std::cout << "Solving machine " << m + 1 << "...\n";
+            machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
+            if (machines[m].min_presses == -1) {
+                std::cout << "Warning: Couldn't solve!\n";
+            }
+            std::cout << '\n';
+        }
 
         // Sum up the solutions
         int sum = 0;
