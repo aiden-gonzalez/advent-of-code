@@ -57,7 +57,7 @@ public:
 std::ostream & operator<<(std::ostream & os, Button const & b) {
     os << "(";
     for (int i = 0; i < b.indexes.size() - 1; i++) {
-        os << b.indexes[i] << ", ";
+        os << b.indexes[i] << ",";
     }
     os << b.indexes[b.indexes.size() - 1] << ")";
     return os;
@@ -98,12 +98,13 @@ class Machine {
 std::ostream & operator<<(std::ostream & os, Machine const & m) {
     os << "Machine: [" << m.ind_lights << "] ";
     for (const auto & button : m.buttons) {
-        os << button;
+        os << button << ' ';
     }
-    for (int joltage : m.joltages) {
-        os << "{" << joltage << "}";
+    os << '{';
+    for (int i = 0; i < m.joltages.size() - 1; i++) {
+        os << m.joltages[i] << ',';
     }
-    os << " -> " << m.min_presses;
+    os << m.joltages[m.joltages.size() - 1] << "} -> " << m.min_presses;
     return os;
 }
 
@@ -323,14 +324,14 @@ int main() {
         }
 
         // Find the solution for each machine
-        for (int m = 0; m < machines.size(); m++) {
-            std::cout << "Solving machine " << m + 1 << "...\n";
-            machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
-            if (machines[m].min_presses == -1) {
-                std::cout << "Warning: Couldn't solve!\n";
-            }
-            std::cout << '\n';
-        }
+        // for (int m = 0; m < machines.size(); m++) {
+        //     std::cout << "Solving machine " << m + 1 << "...\n";
+        //     machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
+        //     if (machines[m].min_presses == -1) {
+        //         std::cout << "Warning: Couldn't solve!\n";
+        //     }
+        //     std::cout << '\n';
+        // }
 
         // Sum up the solutions
         int sum = 0;
