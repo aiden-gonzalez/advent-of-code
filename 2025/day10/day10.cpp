@@ -135,9 +135,23 @@ int solve_one_or_two(const int target, const std::vector<int> &buttons, const st
     return -1;
 }
 
-// std::vector<std::unordered_set<int>> get_sets() {
-//     re
-// }
+void get_subsets_helper(const std::vector<int> &buttons, std::vector<std::unordered_set<int>> &sets, const int k, const int idx, std::unordered_set<int> subset) {
+    if (subset.size() == k) {
+        sets.push_back(subset);
+        return;
+    }
+    for (int i = idx; i < buttons.size(); i++) {
+        subset.insert(buttons[i]);
+        get_subsets_helper(buttons, sets, k, i + 1, subset);
+        subset.erase(buttons[i]);
+    }
+}
+
+std::vector<std::unordered_set<int>> get_subsets(const std::vector<int> &buttons, const int k) {
+    std::vector<std::unordered_set<int>> sets = {};
+    get_subsets_helper(buttons, sets, k, 0, {});
+    return sets;
+}
 
 int solve_machine(const int target, const std::vector<int> &buttons) {
     std::cout << "solve_machine call: Looking to make " << target << " with buttons";
@@ -173,6 +187,26 @@ int solve_machine(const int target, const std::vector<int> &buttons) {
         }
     }
 
+    // Now try combinations of four or greater
+    for (int k = 4; k <= buttons.size(); k++) {
+        // Get all subsets of size k
+        std::vector<std::unordered_set<int>> subsets = get_subsets(buttons, k);
+
+        // Check each subset for a solution
+        for (int s = 0; s < subsets.size(); s++) {
+            // Press all the buttons in the subset
+            int result = 0;
+            for (const auto& num : subsets[s]) {
+                result = result ^ num;
+            }
+
+            // If the result equals the target, return the subset size
+            if (result == target) {
+                return k;
+            }
+        }
+    }
+
     // Didn't find a solution
     std::cout << "Didn't find a solution, returning -1.\n";
     return -1;
@@ -186,7 +220,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -239,6 +273,14 @@ int main() {
             std::cout << '\n';
         }
 
+        // Sum up the solutions
+        int sum = 0;
+        for (int m = 0; m < machines.size(); m++) {
+            std::cout << machines[m] << '\n';
+            sum += machines[m].min_presses;
+        }
+        std::cout << "Total presses: " << sum << '\n';
+
         input_file.close();
     } else {
         std::cout << "Unable to open file";
@@ -246,10 +288,6 @@ int main() {
     }
 
     std::cout << '\n';
-
-    for (int i = 0; i < machines.size(); i++) {
-        std::cout << machines[i] << '\n';
-    }
     
     return 0;
 }
