@@ -47,9 +47,11 @@ class Button {
 public:
     Button (std::vector<int> nums) {
         indexes = nums;
+        presses = 0;
     }
 
     std::vector<int> indexes;
+    int presses;
 
     // Friend function: stream operator overload
     friend std::ostream & operator<<(std::ostream & os, const Button & b);
@@ -120,14 +122,30 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
 
 // BUTTON PRESSING FUNCTIONS
 
+std::vector<int> unpress_button(std::vector<int>& result, const Button& button) {
+    // Decrement the referenced indexes
+    for (const int ind : button.indexes) {
+        result[ind]--;
+    }
+    return result;
+}
+
+std::vector<int> press_button(std::vector<int>& result, const Button& button) {
+    // Increment the referenced indexes
+    for (const int ind : button.indexes) {
+        result[ind]++;
+    }
+    return result;
+}
+
 std::vector<int> press_buttons(const std::vector<Button> &buttons, const int result_size) {
     // Initialize empty result array of given size
     std::vector<int> result(result_size);
 
-    // For each button, increment the referenced indexes
+    // Press each button the specified number of times
     for (const auto & button : buttons) {
-        for (const int ind : button.indexes) {
-            result[ind]++;
+        for (int p = 0; p < button.presses; p++) {
+            press_button(result, button);
         }
     }
 
@@ -165,8 +183,8 @@ bool result_too_large(const std::vector<int> &result, const std::vector<int> &ta
     return false;
 }
 
-bool complement_too_small(const std::vector<int>& complement) {
-    for (const int i : complement) {
+bool result_too_small(const std::vector<int>& result) {
+    for (const int i : result) {
         if (i < 0) {
             return true;
         }
@@ -175,52 +193,58 @@ bool complement_too_small(const std::vector<int>& complement) {
     return false;
 }
 
-// SUBSET FUNCTIONS
-
-void get_subsets_helper(const std::vector<Button> &buttons, std::vector<std::unordered_set<Button>> &sets, const int k, const int idx, std::unordered_set<Button> subset) {
-    if (subset.size() == k) {
-        sets.push_back(subset);
-        return;
-    }
-    for (int i = idx; i < buttons.size(); i++) {
-        subset.insert(buttons[i]);
-        get_subsets_helper(buttons, sets, k, i + 1, subset);
-        subset.erase(buttons[i]);
-    }
-}
-
-std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &buttons, const int k) {
-    std::vector<std::unordered_set<Button>> sets = {};
-    get_subsets_helper(buttons, sets, k, 0, {});
-    return sets;
-}
-
 // SOLVING FUNCTIONS
-
-int solve_machine_helper(
-    const std::vector<int> &target,
-    const std::vector<Button> &buttons,
-    std::vector<int> &presses,
-    int current_button
-) {
-    return 0;
-}
 
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
     // We want to start with the biggest buttons and progress to the smallest
     std::sort(buttons.begin(), buttons.end());
 
-    // Track presses of each button
-    std::vector<int> button_presses(buttons.size(), 0);
+    // Keep track of the current result (starts with 0s)
+    std::vector<int> current_result(target.size(), 0);
 
-    // Once that stops working, we back off and try the next biggest button, so on and so forth
-    // Recursion will help us backtrack every time we run into a dead end
+    // Keep track of the current button and buttons to "freeze" the press count for
+    int current_button = 0;
+    std::unordered_set<Button> frozen;
 
-    // Then, we will try the next biggest button etc.
+    while (0 <= current_button && current_button < buttons.size()) {
+        // If we found a solution, break
+        if (current_result == target) {
+            break;
+        }
+
+        // If this button is frozen, skip it
+        if (frozen.count(buttons[current_button]) == 1) {
+            current_button++;
+            continue;
+        }
+
+        // If we are over the target somehow
+        if (result_too_large(current_result, target)) {
+            // Remove a press from the current button
+            unpress_button(current_result, buttons[current_button]);
+            buttons[current_button].presses--;
+
+            // Move to next button
+            current_button++;
+        }
+
+        // Press button
+        press_button(current_result, buttons[current_button]);
+        buttons[current_button].presses += 1;
+    }
 
     // Didn't find a solution
-    std::cout << "Didn't find a solution, returning -1.\n";
-    return -1;
+    if (current_result != target) {
+        std::cout << "Didn't find a solution, returning -1.\n";
+        return -1;
+    }
+
+    // Otherwise return sum of button presses
+    int sum = 0;
+    for (const auto & button : buttons) {
+        sum += button.presses;
+    }
+    return sum;
 }
 
 // DRIVER CODE
