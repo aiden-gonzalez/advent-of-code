@@ -142,20 +142,20 @@ void press_button(std::vector<int>& result, Button& button) {
 
 // RESULT CHECKING FUNCTIONS
 
-bool result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
+std::unordered_set<int> result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
+    std::unordered_set<int> too_large;
     // Complain and return true if they aren't the same size
     if (result.size() != target.size()) {
         std::cout << "Running result_too_large with different size inputs!!";
-        return true;
+        return too_large;
     }
-
     for (int i = 0; i < result.size(); i++) {
         if (result[i] > target[i]) {
-            return true;
+            too_large.insert(i);
         }
     }
 
-    return false;
+    return too_large;
 }
 
 bool result_too_small(const std::vector<int>& result) {
@@ -201,10 +201,32 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         }
 
         // If we are over the target somehow
-        if (result_too_large(current_result, target)) {
-            std::cout << "result is too large, unpressing current button.\n";
-            // Remove a press from the current button
-            unpress_button(current_result, buttons[current_button]);
+        std::unordered_set<int> too_large = result_too_large(current_result, target);
+        if (too_large.size() > 0) {
+            // std::cout << "result is too large, unpressing current button.\n";
+            // // Remove a press from the current button
+            // unpress_button(current_result, buttons[current_button]);
+
+            // Unpress the least conspicuous button
+            std::cout << "result is too large, finding a button to unpress: ";
+            // Search through the list of sorted buttons from back to front looking for
+            // first button that stops result too large
+            for (int b = buttons.size() - 1; b >= current_button; b--) {
+                if (buttons[b].presses == 0) {
+                    continue;
+                }
+                for (int bi = 0; bi < buttons[b].indexes.size(); bi++) {
+                    if (too_large.count(buttons[b].indexes[bi]) == 1) {
+                        std::cout << buttons[b] << "\n";
+                        unpress_button(current_result, buttons[b]);
+                        break;
+                    }
+                }
+                too_large = result_too_large(current_result, target);
+                if (too_large.size() == 0) {
+                    break;
+                }
+            }
 
             // Move to next button
             current_button++;
@@ -365,7 +387,7 @@ int main() {
             std::cout << "Solving machine: " << machines[m] << "...\n";
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
-                std::cout << "Warning: Couldn't solve!\n";
+                std::cout << "Warning: Couldn't solve! Failed on machine " << m + 1 << ".\n";
                 return 1;
             }
             std::cout << '\n';
