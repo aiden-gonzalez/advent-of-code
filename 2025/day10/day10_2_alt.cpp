@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <algorithm>
 
 /*
     Part 2:
@@ -57,7 +58,8 @@ public:
         return indexes == other.indexes;
     }
 
-    bool operator>(const Button& other) const {
+    bool operator<(const Button& other) const {
+        // Sort in descending order
         return indexes.size() > other.indexes.size();
     }
 };
@@ -71,7 +73,7 @@ std::ostream & operator<<(std::ostream & os, Button const & b) {
     return os;
 }
 
-template <>
+template<>
 struct std::hash<Button> {
     std::size_t operator()(const Button& b) const noexcept {
         std::size_t result = 0;
@@ -195,10 +197,24 @@ std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &b
 
 // SOLVING FUNCTIONS
 
-int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
-    // Generally, we will start with the biggest button and take that away from the target
+int solve_machine_helper(
+    const std::vector<int> &target,
+    const std::vector<Button> &buttons,
+    std::vector<int> &presses,
+    int current_button
+) {
+    return 0;
+}
 
-    int presses = 0;
+int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
+    // We want to start with the biggest buttons and progress to the smallest
+    std::sort(buttons.begin(), buttons.end());
+
+    // Track presses of each button
+    std::vector<int> button_presses(buttons.size(), 0);
+
+    // Once that stops working, we back off and try the next biggest button, so on and so forth
+    // Recursion will help us backtrack every time we run into a dead end
 
     // Then, we will try the next biggest button etc.
 
@@ -252,7 +268,7 @@ int main() {
 
                 // Add to machine buttons
                 buttons.push_back(Button(button_wires));
-                
+
                 // Seek to next button
                 button_start = line.find('(', button_end + 1);
                 button_wires = {};
@@ -299,6 +315,6 @@ int main() {
         std::cout << "Unable to open file";
         return 1;
     }
-    
+
     return 0;
 }
