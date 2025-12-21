@@ -263,28 +263,21 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
     // Initialize empty ignore array for later use
     std::unordered_set<int> ignore = {};
 
-    // Does 1 button work?
-    if (const int one_presses = solve_one(target, buttons, ignore); one_presses > -1) {
-        return one_presses;
-    }
-
-    // Does 2 buttons work?
-    if (const int two_presses = solve_two(target, buttons, ignore); two_presses > -1) {
-        return two_presses;
-    }
-
-    // Three button solution
-    if (const int three_presses = solve_three(target, buttons, ignore); three_presses > -1) {
-        return three_presses;
-    }
+    // Consider potential one, two, and three button solutions
+    std::vector<int> solution_presses(buttons.size(), 0);
+    solution_presses[0] = solve_one(target, buttons, ignore);
+    solution_presses[1] = solve_two(target, buttons, ignore);
+    solution_presses[2] = solve_three(target, buttons, ignore);
 
     // Now try combinations of four or greater
     for (int k = 4; k <= buttons.size(); k++) {
         // Get all subsets of size k
         std::vector<std::unordered_set<Button>> subsets = get_subsets(buttons, k);
 
-        // Check each subset for a solution
+        // Check each subset for a possible solution
         for (const auto & subset : subsets) {
+            // Each button in the subset should be pressed at least once
+            std::vector<int> presses(k, 1);
             // If pressing all the buttons in the subset produces the target, return the subset size
             if (std::vector<int> result = press_buttons(subset, target.size()); result == target) {
                 return k;
