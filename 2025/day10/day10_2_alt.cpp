@@ -168,6 +168,15 @@ bool result_too_small(const std::vector<int>& result) {
     return false;
 }
 
+// Quick print helper function
+void print_current_result(const std::vector<int>& current_result) {
+    std::cout << "Current result: {";
+    for (int i = 0; i < current_result.size() - 1; i++) {
+        std::cout << current_result[i] << ',';
+    }
+    std::cout << current_result[current_result.size() - 1] << "}\n";
+}
+
 // SOLVING FUNCTIONS
 
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
@@ -184,12 +193,9 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     std::cout << "initial current_button: " << buttons[current_button] << '\n';
 
     while (current_button < buttons.size() && backtracking_button < buttons.size()) {
+        print_current_result(current_result);
+
         // If we found a solution, break
-        std::cout << "Checking current result: {";
-        for (const int num : current_result) {
-            std::cout << num << ',';
-        }
-        std::cout << "}\n";
         if (current_result == target) {
             break;
         }
@@ -251,6 +257,7 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
                 // Decrement backtracking button
                 std::cout << "Decrementing backtracking button: " << buttons[backtracking_button] << '\n';
                 unpress_button(current_result, buttons[backtracking_button]);
+                print_current_result(current_result);
                 current_button = backtracking_button + 1;
             }
 
