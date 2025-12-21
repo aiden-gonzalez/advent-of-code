@@ -185,11 +185,11 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     while (current_button < buttons.size() && backtracking_button < buttons.size()) {
         // If we found a solution, break
-        std::cout << "Checking current result: ";
+        std::cout << "Checking current result: {";
         for (const int num : current_result) {
-            std::cout << num << ' ';
+            std::cout << num << ',';
         }
-        std::cout << '\n';
+        std::cout << "}\n";
         if (current_result == target) {
             break;
         }
@@ -205,17 +205,51 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
             // If we run out of buttons before finding a solution, do backtracking
             if (current_button >= buttons.size()) {
-                // If backtracking button is already fully backtracked, find next one to use
-                while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
-                    backtracking_button++;
+                std::cout << "Finding button to backtrack with...\n";
+                while (backtracking_button < buttons.size()) {
+                    // If backtracking button is already fully backtracked, skip to next candidate
+                    while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
+                        std::cout << "Button " << buttons[backtracking_button] << " can't be used, no presses...\n";
+                        backtracking_button++;
+                    }
+
+                    // If we ran out of backtracking buttons, whoops!
+                    if (backtracking_button == buttons.size()) {
+                        std::cout << "Whoops we ran out of backtracking buttons!\n";
+                        return -1;
+                    }
+
+                    // Check to make sure that this button doesn't uniquely satisfy a requirement
+                    bool use_this_button = true;
+                    std::unordered_set<int> future_indexes = {};
+                    for (int b = backtracking_button + 1; b < buttons.size(); b++) {
+                        for (int i : buttons[b].indexes) {
+                            future_indexes.insert(i);
+                        }
+                    }
+                    for (int bb_i : buttons[backtracking_button].indexes) {
+                        // If this index isn't in any later button, we can't use this button for backtracking
+                        if (future_indexes.count(bb_i) == 0) {
+                            std::cout << "Button " << buttons[backtracking_button] << " has a unique index, can't use...\n";
+                            backtracking_button++;
+                            use_this_button = false;
+                            break;
+                        }
+                    }
+
+                    // Did we finally find our button?
+                    if (use_this_button) {
+                        break;
+                    }
                 }
-                // If we ran out of backtracking buttons, whoops!
-                if (backtracking_button == buttons.size()) {
-                    std::cout << "Whoops we ran out of backtracking buttons...\n";
-                    break;
+
+                if (backtracking_button < 0 || backtracking_button >= buttons.size()) {
+                    std::cout << "Whoops we ran out of backtracking buttons!\n";
+                    return -1;
                 }
 
                 // Decrement backtracking button
+                std::cout << "Decrementing backtracking button: " << buttons[backtracking_button] << '\n';
                 unpress_button(current_result, buttons[backtracking_button]);
                 current_button = backtracking_button + 1;
             }
@@ -259,7 +293,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -325,6 +359,7 @@ int main() {
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve!\n";
+                return 1;
             }
             std::cout << '\n';
         }
