@@ -122,50 +122,25 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
 
 // BUTTON PRESSING FUNCTIONS
 
-std::vector<int> unpress_button(std::vector<int>& result, const Button& button) {
+void unpress_button(std::vector<int>& result, Button& button) {
     // Decrement the referenced indexes
     for (const int ind : button.indexes) {
         result[ind]--;
     }
-    return result;
+    // Decrement number of presses
+    button.presses--;
 }
 
-std::vector<int> press_button(std::vector<int>& result, const Button& button) {
+void press_button(std::vector<int>& result, Button& button) {
     // Increment the referenced indexes
     for (const int ind : button.indexes) {
         result[ind]++;
     }
-    return result;
+    // Increment number of presses
+    button.presses++;
 }
 
-std::vector<int> press_buttons(const std::vector<Button> &buttons, const int result_size) {
-    // Initialize empty result array of given size
-    std::vector<int> result(result_size);
-
-    // Press each button the specified number of times
-    for (const auto & button : buttons) {
-        for (int p = 0; p < button.presses; p++) {
-            press_button(result, button);
-        }
-    }
-
-    return result;
-}
-
-std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
-    std::vector<Button> buttons_vec;
-    for (const auto & button : buttons) {
-        buttons_vec.push_back(button);
-    }
-    return press_buttons(buttons_vec, result_size);
-}
-
-std::vector<int> get_complement(std::vector<int> base, const Button &button) {
-    for (const int ind : button.indexes) {
-        base[ind]--;
-    }
-    return base;
-}
+// RESULT CHECKING FUNCTIONS
 
 bool result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
     // Complain and return true if they aren't the same size
@@ -202,35 +177,55 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     // Keep track of the current result (starts with 0s)
     std::vector<int> current_result(target.size(), 0);
 
-    // Keep track of the current button and buttons to "freeze" the press count for
+    // Keep track of the current button and backtracking button
     int current_button = 0;
-    std::unordered_set<Button> frozen;
+    int backtracking_button = 0;
 
-    while (0 <= current_button && current_button < buttons.size()) {
+    std::cout << "initial current_button: " << buttons[current_button] << '\n';
+
+    while (current_button < buttons.size() && backtracking_button < buttons.size()) {
         // If we found a solution, break
+        std::cout << "Checking current result: ";
+        for (const int num : current_result) {
+            std::cout << num << ' ';
+        }
+        std::cout << '\n';
         if (current_result == target) {
             break;
         }
 
-        // If this button is frozen, skip it
-        if (frozen.count(buttons[current_button]) == 1) {
-            current_button++;
-            continue;
-        }
-
         // If we are over the target somehow
         if (result_too_large(current_result, target)) {
+            std::cout << "result is too large, unpressing current button.\n";
             // Remove a press from the current button
             unpress_button(current_result, buttons[current_button]);
-            buttons[current_button].presses--;
 
             // Move to next button
             current_button++;
+
+            // If we run out of buttons before finding a solution, do backtracking
+            if (current_button >= buttons.size()) {
+                // If backtracking button is already fully backtracked, find next one to use
+                while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
+                    backtracking_button++;
+                }
+                // If we ran out of backtracking buttons, whoops!
+                if (backtracking_button == buttons.size()) {
+                    std::cout << "Whoops we ran out of backtracking buttons...\n";
+                    break;
+                }
+
+                // Decrement backtracking button
+                unpress_button(current_result, buttons[backtracking_button]);
+                current_button = backtracking_button + 1;
+            }
+
+            std::cout << "new current_button: " << buttons[current_button] << '\n';
         }
 
         // Press button
+        std::cout << "Pressing button: " << buttons[current_button] << '\n';
         press_button(current_result, buttons[current_button]);
-        buttons[current_button].presses += 1;
     }
 
     // Didn't find a solution
@@ -241,9 +236,16 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     // Otherwise return sum of button presses
     int sum = 0;
+    std::cout << "Solution found: ";
     for (const auto & button : buttons) {
+        if (button.presses == 0) {
+            continue;
+        }
+
+        std::cout << button << " pressed " << button.presses << " times; ";
         sum += button.presses;
     }
+    std::cout << '\n';
     return sum;
 }
 
@@ -257,7 +259,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("super_simple_input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
