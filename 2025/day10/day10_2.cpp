@@ -187,7 +187,7 @@ std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &b
 
 // SOLVING FUNCTIONS
 
-bool solve_one(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
+int solve_one(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     for (int b = 0; b < buttons.size(); b++) {
         // If button is ignored, skip it
         if (ignore.count(b) == 1) {
@@ -201,16 +201,16 @@ bool solve_one(const std::vector<int> &target, const std::vector<Button> &button
             result = press_buttons(buttons_to_press, result.size());
             if (result == target) {
                 std::cout << "Found a one button solution: " << buttons[b] << " pressed " << buttons_to_press.size() << " times \n";
-                return true;
+                return buttons_to_press.size();
             }
             buttons_to_press.push_back(buttons[b]);
         }
     }
 
-    return false;
+    return -1;
 }
 
-bool solve_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
+int solve_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
     for (int b = 0; b < buttons.size(); b++) {
         if (ignore.count(b) == 1) {
             continue;
@@ -225,9 +225,9 @@ bool solve_two(const std::vector<int> &target, const std::vector<Button> &button
                     continue;
                 }
 
-                if (solve_one(complement, buttons, ignore)) {
-                    std::cout << "Found a two button solution: " << buttons[b] << " pressed " << num_complements << " times and prior one button solution\n";
-                    return true;
+                if (const int one_presses = solve_one(complement, buttons, ignore); one_presses > -1) {
+                    std::cout << "Found a two button solution: " << buttons[b] << " pressed " << num_complements << " times and " << buttons[bc] << " pressed " << one_presses << " times.\n";
+                    return num_complements + one_presses;
                 }
             }
             complement = get_complement(complement, buttons[b]);
@@ -235,10 +235,10 @@ bool solve_two(const std::vector<int> &target, const std::vector<Button> &button
         }
     }
 
-    return false;
+    return -1;
 }
 
-bool solve_three(const std::vector<int> &target, const std::vector<Button> &buttons, std::unordered_set<int> &ignore) {
+int solve_three(const std::vector<int> &target, const std::vector<Button> &buttons, std::unordered_set<int> &ignore) {
     for (int b = 0; b < buttons.size(); b++) {
         ignore.insert(b);
 
@@ -246,9 +246,9 @@ bool solve_three(const std::vector<int> &target, const std::vector<Button> &butt
         std::vector<int> complement = get_complement(target, buttons[b]);
         int num_complements = 1;
         while (!complement_too_small(complement)) {
-            if (solve_two(complement, buttons, ignore)) {
-                std::cout << "Found three press solution: " << buttons[b] << " pressed " << num_complements << " times and prior two press sol" << '\n';
-                return true;
+            if (const int two_presses = solve_two(complement, buttons, ignore); two_presses > -1) {
+                std::cout << "Found three press solution: " << buttons[b] << " pressed " << num_complements << " times and prior two press solution (totaling " << num_complements + two_presses << " presses).\n";
+                return num_complements + two_presses;
             }
             complement = get_complement(complement, buttons[b]);
             num_complements++;
@@ -256,7 +256,7 @@ bool solve_three(const std::vector<int> &target, const std::vector<Button> &butt
         ignore.erase(b);
     }
 
-    return false;
+    return -1;
 }
 
 int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
@@ -264,18 +264,18 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
     std::unordered_set<int> ignore = {};
 
     // Does 1 button work?
-    if (solve_one(target, buttons, ignore)) {
-        return 1;
+    if (const int one_presses = solve_one(target, buttons, ignore); one_presses > -1) {
+        return one_presses;
     }
 
     // Does 2 buttons work?
-    if (solve_two(target, buttons, ignore)) {
-        return 2;
+    if (const int two_presses = solve_two(target, buttons, ignore); two_presses > -1) {
+        return two_presses;
     }
 
     // Three button solution
-    if (solve_three(target, buttons, ignore)) {
-        return 3;
+    if (const int three_presses = solve_three(target, buttons, ignore); three_presses > -1) {
+        return three_presses;
     }
 
     // Now try combinations of four or greater
@@ -285,11 +285,8 @@ int solve_machine(const std::vector<int>& target, const std::vector<Button> &but
 
         // Check each subset for a solution
         for (const auto & subset : subsets) {
-            // Press all the buttons in the subset
-            std::vector<int> result = press_buttons(subset, target.size());
-
-            // If the result equals the target, return the subset size
-            if (result == target) {
+            // If pressing all the buttons in the subset produces the target, return the subset size
+            if (std::vector<int> result = press_buttons(subset, target.size()); result == target) {
                 return k;
             }
         }
