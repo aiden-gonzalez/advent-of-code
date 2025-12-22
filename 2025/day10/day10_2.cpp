@@ -240,36 +240,10 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
             // Remove a press from the current button
             unpress_button(current_result, buttons[current_button]);
 
-            // // Unpress the least conspicuous button
-            // std::cout << "result is too large, finding a button to unpress: ";
-            // // Search through the list of sorted buttons from back to front looking for
-            // // first button that stops result from being too large
-            // for (int b = buttons.size() - 1; b >= current_button; b--) {
-            //     if (buttons[b].presses == 0) {
-            //         continue;
-            //     }
-            //     for (int bi = 0; bi < buttons[b].indexes.size(); bi++) {
-            //         if (too_large.count(buttons[b].indexes[bi]) == 1) {
-            //             std::cout << buttons[b] << "\n";
-            //             unpress_button(current_result, buttons[b]);
-            //             break;
-            //         }
-            //     }
-            //     too_large = too_large_indexes(current_result, target);
-            //     if (too_large.size() == 0) {
-            //         break;
-            //     }
-            // }
-
-            // Move to next button
-            current_button++;
-
             // If we run out of buttons before finding a solution, do backtracking
             if (current_button >= buttons.size()) {
-                std::cout << "Finding button to backtrack with...\n";
                 // Find first button that can be backtracked
-                while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
-                    std::cout << "Button " << buttons[backtracking_button] << " can't be used, no presses...\n";
+                while ((buttons[backtracking_button].presses == 0 || ignore.count(backtracking_button) == 1) && backtracking_button < buttons.size()) {
                     backtracking_button++;
                 }
 
@@ -282,11 +256,17 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
                 // Decrement backtracking button
                 std::cout << "Decrementing backtracking button: " << buttons[backtracking_button] << '\n';
                 unpress_button(current_result, buttons[backtracking_button]);
-                print_current_result(current_result);
                 current_button = backtracking_button + 1;
+            } else {
+                // Otherwise, just move to the next button
+                current_button++;
             }
+        }
 
-            std::cout << "new current_button: " << buttons[current_button] << '\n';
+        // If this button is ignored (unique) skip it
+        if (ignore.count(current_button) == 1) {
+            current_button++;
+            continue;
         }
 
         // Press button
