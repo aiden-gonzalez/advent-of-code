@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <algorithm>
 
 /*
     Part 2:
@@ -34,6 +35,10 @@
     configure each machines joltage level counters.
 
     Example input again.
+
+    Ok for this alternate method, we will try a totally different approach. We will
+    start with the biggest possible button and try to whittle down the joltages
+    that way.
 */
 
 // BUTTON CODE
@@ -42,15 +47,22 @@ class Button {
 public:
     Button (std::vector<int> nums) {
         indexes = nums;
+        presses = 0;
     }
 
     std::vector<int> indexes;
+    int presses;
 
     // Friend function: stream operator overload
     friend std::ostream & operator<<(std::ostream & os, const Button & b);
 
     bool operator==(const Button& other) const {
         return indexes == other.indexes;
+    }
+
+    bool operator<(const Button& other) const {
+        // Sort in descending order
+        return indexes.size() > other.indexes.size();
     }
 };
 
@@ -63,7 +75,7 @@ std::ostream & operator<<(std::ostream & os, Button const & b) {
     return os;
 }
 
-template <>
+template<>
 struct std::hash<Button> {
     std::size_t operator()(const Button& b) const noexcept {
         std::size_t result = 0;
@@ -110,53 +122,44 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
 
 // BUTTON PRESSING FUNCTIONS
 
-std::vector<int> press_buttons(const std::vector<Button> &buttons, const int result_size) {
-    // Initialize empty result array of given size
-    std::vector<int> result(result_size);
-
-    // For each button, increment the referenced indexes
-    for (const auto & button : buttons) {
-        for (const int ind : button.indexes) {
-            result[ind]++;
-        }
-    }
-
-    return result;
-}
-
-std::vector<int> press_buttons(const std::unordered_set<Button> &buttons, const int result_size) {
-    std::vector<Button> buttons_vec;
-    for (const auto & button : buttons) {
-        buttons_vec.push_back(button);
-    }
-    return press_buttons(buttons_vec, result_size);
-}
-
-std::vector<int> get_complement(std::vector<int> base, const Button &button) {
+void unpress_button(std::vector<int>& result, Button& button) {
+    // Decrement the referenced indexes
     for (const int ind : button.indexes) {
-        base[ind]--;
+        result[ind]--;
     }
-    return base;
+    // Decrement number of presses
+    button.presses--;
 }
 
-bool result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
+void press_button(std::vector<int>& result, Button& button) {
+    // Increment the referenced indexes
+    for (const int ind : button.indexes) {
+        result[ind]++;
+    }
+    // Increment number of presses
+    button.presses++;
+}
+
+// RESULT CHECKING FUNCTIONS
+
+std::unordered_set<int> result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
+    std::unordered_set<int> too_large;
     // Complain and return true if they aren't the same size
     if (result.size() != target.size()) {
         std::cout << "Running result_too_large with different size inputs!!";
-        return true;
+        return too_large;
     }
-
     for (int i = 0; i < result.size(); i++) {
         if (result[i] > target[i]) {
-            return true;
+            too_large.insert(i);
         }
     }
 
-    return false;
+    return too_large;
 }
 
-bool complement_too_small(const std::vector<int>& complement) {
-    for (const int i : complement) {
+bool result_too_small(const std::vector<int>& result) {
+    for (const int i : result) {
         if (i < 0) {
             return true;
         }
@@ -165,129 +168,148 @@ bool complement_too_small(const std::vector<int>& complement) {
     return false;
 }
 
-// SUBSET FUNCTIONS
-
-void get_subsets_helper(const std::vector<Button> &buttons, std::vector<std::unordered_set<Button>> &sets, const int k, const int idx, std::unordered_set<Button> subset) {
-    if (subset.size() == k) {
-        sets.push_back(subset);
-        return;
+// Quick print helper function
+void print_current_result(const std::vector<int>& current_result) {
+    std::cout << "Current result: {";
+    for (int i = 0; i < current_result.size() - 1; i++) {
+        std::cout << current_result[i] << ',';
     }
-    for (int i = idx; i < buttons.size(); i++) {
-        subset.insert(buttons[i]);
-        get_subsets_helper(buttons, sets, k, i + 1, subset);
-        subset.erase(buttons[i]);
-    }
-}
-
-std::vector<std::unordered_set<Button>> get_subsets(const std::vector<Button> &buttons, const int k) {
-    std::vector<std::unordered_set<Button>> sets = {};
-    get_subsets_helper(buttons, sets, k, 0, {});
-    return sets;
+    std::cout << current_result[current_result.size() - 1] << "}\n";
 }
 
 // SOLVING FUNCTIONS
 
-int solve_one(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
-    for (int b = 0; b < buttons.size(); b++) {
-        // If button is ignored, skip it
-        if (ignore.count(b) == 1) {
-            continue;
+int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
+    // We want to start with the biggest buttons and progress to the smallest
+    std::sort(buttons.begin(), buttons.end());
+
+    // Keep track of the current result (starts with 0s)
+    std::vector<int> current_result(target.size(), 0);
+
+    // Keep track of the current button and backtracking button
+    int current_button = 0;
+    int backtracking_button = 0;
+
+    std::cout << "initial current_button: " << buttons[current_button] << '\n';
+
+    while (current_button < buttons.size() && backtracking_button < buttons.size()) {
+        print_current_result(current_result);
+
+        // If we found a solution, break
+        if (current_result == target) {
+            break;
         }
 
-        // Press button until you either get the solution or one of the numbers is too large
-        std::vector<int> result(target.size());
-        std::vector<Button> buttons_to_press = {buttons[b]};
-        while (!result_too_large(result, target)) {
-            result = press_buttons(buttons_to_press, result.size());
-            if (result == target) {
-                std::cout << "Found a one button solution: " << buttons[b] << " pressed " << buttons_to_press.size() << " times \n";
-                return buttons_to_press.size();
-            }
-            buttons_to_press.push_back(buttons[b]);
-        }
-    }
+        // If we are over the target somehow
+        std::unordered_set<int> too_large = result_too_large(current_result, target);
+        if (too_large.size() > 0) {
+            // std::cout << "result is too large, unpressing current button.\n";
+            // // Remove a press from the current button
+            // unpress_button(current_result, buttons[current_button]);
 
-    return -1;
-}
-
-int solve_two(const std::vector<int> &target, const std::vector<Button> &buttons, const std::unordered_set<int> &ignore) {
-    for (int b = 0; b < buttons.size(); b++) {
-        if (ignore.count(b) == 1) {
-            continue;
-        }
-
-        // Complement using this button until we bottom-out an index
-        std::vector<int> complement = get_complement(target, buttons[b]);
-        int num_complements = 1;
-        while (!complement_too_small(complement)) {
-            for (int bc = b + 1; bc < buttons.size(); bc++) {
-                if (ignore.count(bc) == 1) {
+            // Unpress the least conspicuous button
+            std::cout << "result is too large, finding a button to unpress: ";
+            // Search through the list of sorted buttons from back to front looking for
+            // first button that stops result too large
+            for (int b = buttons.size() - 1; b >= current_button; b--) {
+                if (buttons[b].presses == 0) {
                     continue;
                 }
-
-                if (const int one_presses = solve_one(complement, buttons, ignore); one_presses > -1) {
-                    std::cout << "Found a two button solution: " << buttons[b] << " pressed " << num_complements << " times and " << buttons[bc] << " pressed " << one_presses << " times.\n";
-                    return num_complements + one_presses;
+                for (int bi = 0; bi < buttons[b].indexes.size(); bi++) {
+                    if (too_large.count(buttons[b].indexes[bi]) == 1) {
+                        std::cout << buttons[b] << "\n";
+                        unpress_button(current_result, buttons[b]);
+                        break;
+                    }
+                }
+                too_large = result_too_large(current_result, target);
+                if (too_large.size() == 0) {
+                    break;
                 }
             }
-            complement = get_complement(complement, buttons[b]);
-            num_complements++;
-        }
-    }
 
-    return -1;
-}
+            // Move to next button
+            current_button++;
 
-int solve_three(const std::vector<int> &target, const std::vector<Button> &buttons, std::unordered_set<int> &ignore) {
-    for (int b = 0; b < buttons.size(); b++) {
-        ignore.insert(b);
+            // If we run out of buttons before finding a solution, do backtracking
+            if (current_button >= buttons.size()) {
+                std::cout << "Finding button to backtrack with...\n";
+                while (backtracking_button < buttons.size()) {
+                    // If backtracking button is already fully backtracked, skip to next candidate
+                    while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
+                        std::cout << "Button " << buttons[backtracking_button] << " can't be used, no presses...\n";
+                        backtracking_button++;
+                    }
 
-        // Complement using this button until we bottom-out an index
-        std::vector<int> complement = get_complement(target, buttons[b]);
-        int num_complements = 1;
-        while (!complement_too_small(complement)) {
-            if (const int two_presses = solve_two(complement, buttons, ignore); two_presses > -1) {
-                std::cout << "Found three press solution: " << buttons[b] << " pressed " << num_complements << " times and prior two press solution (totaling " << num_complements + two_presses << " presses).\n";
-                return num_complements + two_presses;
+                    // If we ran out of backtracking buttons, whoops!
+                    if (backtracking_button == buttons.size()) {
+                        std::cout << "Whoops we ran out of backtracking buttons!\n";
+                        return -1;
+                    }
+
+                    // Check to make sure that this button doesn't uniquely satisfy a requirement
+                    bool use_this_button = true;
+                    std::unordered_set<int> future_indexes = {};
+                    for (int b = backtracking_button + 1; b < buttons.size(); b++) {
+                        for (int i : buttons[b].indexes) {
+                            future_indexes.insert(i);
+                        }
+                    }
+                    for (int bb_i : buttons[backtracking_button].indexes) {
+                        // If this index isn't in any later button, we can't use this button for backtracking
+                        if (future_indexes.count(bb_i) == 0) {
+                            std::cout << "Button " << buttons[backtracking_button] << " has a unique index, can't use...\n";
+                            backtracking_button++;
+                            use_this_button = false;
+                            break;
+                        }
+                    }
+
+                    // Did we finally find our button?
+                    if (use_this_button) {
+                        break;
+                    }
+                }
+
+                if (backtracking_button < 0 || backtracking_button >= buttons.size()) {
+                    std::cout << "Whoops we ran out of backtracking buttons!\n";
+                    return -1;
+                }
+
+                // Decrement backtracking button
+                std::cout << "Decrementing backtracking button: " << buttons[backtracking_button] << '\n';
+                unpress_button(current_result, buttons[backtracking_button]);
+                print_current_result(current_result);
+                current_button = backtracking_button + 1;
             }
-            complement = get_complement(complement, buttons[b]);
-            num_complements++;
+
+            std::cout << "new current_button: " << buttons[current_button] << '\n';
         }
-        ignore.erase(b);
-    }
 
-    return -1;
-}
-
-int solve_machine(const std::vector<int>& target, const std::vector<Button> &buttons) {
-    // Initialize empty ignore array for later use
-    std::unordered_set<int> ignore = {};
-
-    // Consider potential one, two, and three button solutions
-    std::vector<int> solution_presses(buttons.size(), 0);
-    solution_presses[0] = solve_one(target, buttons, ignore);
-    solution_presses[1] = solve_two(target, buttons, ignore);
-    solution_presses[2] = solve_three(target, buttons, ignore);
-
-    // Now try combinations of four or greater
-    for (int k = 4; k <= buttons.size(); k++) {
-        // Get all subsets of size k
-        std::vector<std::unordered_set<Button>> subsets = get_subsets(buttons, k);
-
-        // Check each subset for a possible solution
-        for (const auto & subset : subsets) {
-            // Each button in the subset should be pressed at least once
-            std::vector<int> presses(k, 1);
-            // If pressing all the buttons in the subset produces the target, return the subset size
-            if (std::vector<int> result = press_buttons(subset, target.size()); result == target) {
-                return k;
-            }
-        }
+        // Press button
+        std::cout << "Pressing button: " << buttons[current_button] << '\n';
+        press_button(current_result, buttons[current_button]);
     }
 
     // Didn't find a solution
-    std::cout << "Didn't find a solution, returning -1.\n";
-    return -1;
+    if (current_result != target) {
+        std::cout << "Didn't find a solution, returning -1.\n";
+        return -1;
+    }
+
+    // Otherwise return sum of button presses
+    int sum = 0;
+    std::cout << "Solution found: ";
+    for (const auto & button : buttons) {
+        if (button.presses == 0) {
+            continue;
+        }
+
+        std::cout << button << " pressed " << button.presses << " times; ";
+        sum += button.presses;
+    }
+    std::cout << '\n';
+    return sum;
 }
 
 // DRIVER CODE
@@ -300,7 +322,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("super_simple_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -335,7 +357,7 @@ int main() {
 
                 // Add to machine buttons
                 buttons.push_back(Button(button_wires));
-                
+
                 // Seek to next button
                 button_start = line.find('(', button_end + 1);
                 button_wires = {};
@@ -365,7 +387,8 @@ int main() {
             std::cout << "Solving machine: " << machines[m] << "...\n";
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
-                std::cout << "Warning: Couldn't solve!\n";
+                std::cout << "Warning: Couldn't solve! Failed on machine " << m + 1 << ".\n";
+                return 1;
             }
             std::cout << '\n';
         }
@@ -382,6 +405,6 @@ int main() {
         std::cout << "Unable to open file";
         return 1;
     }
-    
+
     return 0;
 }
