@@ -222,10 +222,8 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     // Find buttons with unique indexes and press them first
     press_unique_buttons(target, buttons, current_result, ignore);
-    std::cout << "Result after pressing unique buttons: ";
+    std::cout << "After pressing unique buttons ";
     print_current_result(current_result);
-
-    std::cout << "initial current_button: " << buttons[current_button] << '\n';
 
     while (current_button < buttons.size() && backtracking_button < buttons.size()) {
         // If we found a solution, break
@@ -236,12 +234,12 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         // If we are over the target somehow
         std::unordered_set<int> too_large = too_large_indexes(current_result, target);
         if (too_large.size() > 0) {
-            std::cout << "result is too large, unpressing current button.\n";
+            std::cout << "result is too large, unpressing current button: " << buttons[current_button] << "\n";
             // Remove a press from the current button
             unpress_button(current_result, buttons[current_button]);
 
             // If we run out of buttons before finding a solution, do backtracking
-            if (current_button >= buttons.size()) {
+            if (current_button == buttons.size() - 1) {
                 // Find first button that can be backtracked
                 while ((buttons[backtracking_button].presses == 0 || ignore.count(backtracking_button) == 1) && backtracking_button < buttons.size()) {
                     backtracking_button++;
