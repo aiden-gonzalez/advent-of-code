@@ -208,6 +208,8 @@ int sum_up_buttons(const std::vector<Button>& buttons) {
 // SOLVING FUNCTIONS
 
 void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &buttons, std::vector<int> &current_result, std::unordered_set<int> &ignore) {
+    // TODO put this whole thing in a loop. Once one unique button is eliminated (ignored), there maybe other buttons that emerge with their own unique indexes.
+    // Because once one button is locked, another button might also be locked in relation.
     for (int b = 0; b < buttons.size(); b++) {
         // Get all indexes from other buttons. Ugly but works.
         std::unordered_set<int> all_other_button_inds;
@@ -266,6 +268,8 @@ bool solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
     }
 
     // Now use recursion to solve rest of problem and back off this button gradually as needed
+    // TODO instead of backing off, just start with 0 presses and increment up each time? And ignore it before the loop and unignore after the loop.
+    // That way we brute force more effectively? idk. Secondary to the unique indexes improvement.
     bool solved = solve_machine_helper(target, buttons, ignore, current_result, current_button + 1);
     while (!solved && buttons[current_button].presses > 0) {
         unpress_button(current_result, buttons[current_button]);
