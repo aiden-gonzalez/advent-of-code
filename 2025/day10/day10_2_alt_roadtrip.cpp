@@ -276,22 +276,34 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     // Try pressing any button in the list of possible max jolt manipulators
     std::vector<int> cr;
     std::vector<Button> btns;
+    std::unordered_set<int> ib_i = ignore_buttons;
     int dist;
+    int counter = 0;
     do {
         std::cout << "New order of buttons.\n";
         cr = current_result;
         btns = buttons;
+        ib_i = ignore_buttons;
         // Try reaching max presses by pressing each button 
         for (int incr = 0; incr < max_jolt; incr++) {
             for (int i = 0; i < inds_buttons_for_max.size(); i++) {
+                ib_i.insert(inds_buttons_for_max[i]);
                 // TODO: actually should use dist to find the distance between min number in target at an index manipulated by that button
                 dist = max_jolt - cr[inds_manip_max_jolt[i]];
-                if (i == 0) {
-                    dist -= incr;
-                    std::cout << "Try a smaller number of presses on the first.\n";
+                int min_dist = dist;
+                int candidate_min;
+                for (int i : btns[inds_buttons_for_max[i]].indexes) {
+                    candidate_min = target[i] - cr[i];
+                    if (candidate_min < min_dist) {
+                        min_dist = candidate_min;
+                    }
                 }
-                if (dist > 0) {
-                    press_valid_times(btns[inds_buttons_for_max[i]],target,cr,dist);
+                if (i == 0) {
+                    min_dist -= incr;
+                    std::cout << "Try a smaller number of presses on the first, by " << incr << ".\n";
+                }
+                if (min_dist > 0) {
+                    press_valid_times(btns[inds_buttons_for_max[i]],target,cr,min_dist);
                 }
                 if (cr == target) {
                     break;
@@ -300,13 +312,73 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
             if (cr == target) {
                 break;
             }
+            int sum = 0;
+            for (const auto & btn : btns) {
+                sum += btn.presses;
+            }
+            // now try extra presses beyond max joltage
+            std::cout << "-----now trying extra presses after first " << sum << " to reach max jolt of " << max_jolt << ", init with dist " << dist << "\n";
+            counter++;
+            std::vector<Button> ordered_btns = btns;
+            do {
+                for (int i = 0; i < ordered_btns.size(); i++) {
+                    if (ib_i.count(i) > 0) {
+                        std::cout << "uses an ignorable button" << ordered_btns[i] << "skip it.";
+                        continue;
+                    }
+                    int min_dist = 100000;
+                    int candidate_min;
+                    for (int incr_others = 0; incr_others < max_jolt; incr_others++) {
+                        int count = 0;
+                        for (int idx : ordered_btns[inds_buttons_for_max[i]].indexes) {
+                            count++;
+                            candidate_min = target[idx] - cr[idx];
+                            if (candidate_min == 0) {
+                                std::cout << " skip " << idx << " of " << ordered_btns[inds_buttons_for_max[i]] << "!";
+                                break;
+                            } else if (candidate_min < min_dist) {
+                                min_dist = candidate_min;
+                                std::cout << "\n";
+                            }
+                            if (count == 1) {
+                                min_dist -= incr_others;
+                                std::cout << "dcr number of presses on the first, by " << incr_others << ".\n";
+                            }
+                            if (min_dist > 0) {
+                                press_valid_times(ordered_btns[i],target,cr,min_dist);
+                            }
+                            if (cr == target) {
+                                break;
+                            }
+                        }
+                    }
+                    if (cr == target) {
+                        btns = ordered_btns;
+                        break;
+                    }
+                }
+                if (cr == target) {
+                    btns = ordered_btns;
+                    break;
+                }
+            } while (std::next_permutation(ordered_btns.begin(),ordered_btns.end()));
+            if (cr == target) {
+                break;
+            }
+            std::cout << "\n";
+            if (counter > 20) {
+                // std::cout << "end early for brevity\n";
+                // return -1;
+            }
             // Try pressing less than the max distance
             cr = current_result;
             btns = buttons;
+            ib_i = ignore_buttons;
         }
         if (cr == target) {
             break;
         }
+        // return 0;
     } while (std::next_permutation(inds_buttons_for_max.begin(),inds_buttons_for_max.end()));
     current_result = cr;
     buttons = btns;
@@ -343,7 +415,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -405,11 +477,11 @@ int main() {
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
-            std::cout << "Solving machine: " << machines[m] << "...\n";
+            std::cout << "Solving machine: " << machines[m] << "...>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve! Failed on machine " << m + 1 << ".\n";
-                // return 1;
+                return 1;
             }
             std::cout << '\n';
         }
