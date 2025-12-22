@@ -208,34 +208,44 @@ int sum_up_buttons(const std::vector<Button>& buttons) {
 // SOLVING FUNCTIONS
 
 void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &buttons, std::vector<int> &current_result, std::unordered_set<int> &ignore) {
-    // TODO put this whole thing in a loop. Once one unique button is eliminated (ignored), there maybe other buttons that emerge with their own unique indexes.
-    // Because once one button is locked, another button might also be locked in relation.
-    for (int b = 0; b < buttons.size(); b++) {
-        // Get all indexes from other buttons. Ugly but works.
-        std::unordered_set<int> all_other_button_inds;
-        for (int o = 0; o < buttons.size(); o++) {
-            // Skip the current button
-            if (o == b) {
+    bool unique_button_found;
+    do {
+        unique_button_found = false;
+        for (int b = 0; b < buttons.size(); b++) {
+            std::cout << "Considering for unique: " << buttons[b] << '\n';
+            // If button is already ignored, don't investigate it for unique indexes
+            if (ignore.count(b) == 1) {
                 continue;
             }
 
-            for (int i : buttons[o].indexes) {
-                all_other_button_inds.insert(i);
-            }
-        }
+            // Get all indexes from other buttons. Ugly but works.
+            std::unordered_set<int> all_other_button_inds;
+            for (int o = 0; o < buttons.size(); o++) {
+                // Skip the current button or ignored buttons
+                if (o == b || ignore.count(o) == 1) {
+                    continue;
+                }
 
-        // Check to see if the current button has any unique indexes
-        for (int but_ind : buttons[b].indexes) {
-            // If index is unique, press that button the required number of times to reach its specified joltage
-            if (all_other_button_inds.count(but_ind) == 0) {
-                std::cout << "Button " << buttons[b] << " has unique index, " << but_ind << ", must press " << target[but_ind] << " times.\n";
-                press_button(current_result, buttons[b], target[but_ind]);
-                ignore.insert(b);
-                // Don't need to press it any more or less times, break
-                break;
+                for (int i : buttons[o].indexes) {
+                    all_other_button_inds.insert(i);
+                }
+            }
+
+            // Check to see if the current button has any unique indexes
+            for (int but_ind : buttons[b].indexes) {
+                // If index is unique, press that button the required number of times to reach its specified joltage
+                if (all_other_button_inds.count(but_ind) == 0) {
+                    unique_button_found = true;
+                    int num_presses = press_max_times(current_result, target, buttons[b]);
+                    std::cout << "Button " << buttons[b] << " has unique index, " << but_ind << ", pressed " << num_presses << " times.\n";
+                    ignore.insert(b);
+                    // Don't need to press it any more or less times, break
+                    break;
+                }
             }
         }
-    }
+    // Repeat unique button finding process until no more unique buttons are found
+    } while (unique_button_found);    
 }
 
 bool solve_machine_helper(const std::vector<int>& target, std::vector<Button>& buttons, const std::unordered_set<int> &ignore, std::vector<int> &current_result, int current_button) {
