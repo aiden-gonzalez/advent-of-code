@@ -122,31 +122,31 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
 
 // BUTTON PRESSING FUNCTIONS
 
-void unpress_button(std::vector<int>& result, Button& button) {
+void unpress_button(std::vector<int>& result, Button& button, int num_presses = 1) {
     // Decrement the referenced indexes
     for (const int ind : button.indexes) {
-        result[ind]--;
+        result[ind] -= num_presses;
     }
     // Decrement number of presses
-    button.presses--;
+    button.presses -= num_presses;
 }
 
-void press_button(std::vector<int>& result, Button& button) {
+void press_button(std::vector<int>& result, Button& button, int num_presses = 1) {
     // Increment the referenced indexes
     for (const int ind : button.indexes) {
-        result[ind]++;
+        result[ind] += num_presses;
     }
     // Increment number of presses
-    button.presses++;
+    button.presses += num_presses;
 }
 
 // RESULT CHECKING FUNCTIONS
 
-std::unordered_set<int> result_too_large(const std::vector<int> &result, const std::vector<int> &target) {
+std::unordered_set<int> too_large_indexes(const std::vector<int> &result, const std::vector<int> &target) {
     std::unordered_set<int> too_large;
     // Complain and return true if they aren't the same size
     if (result.size() != target.size()) {
-        std::cout << "Running result_too_large with different size inputs!!";
+        std::cout << "Running too_large_indexes with different size inputs!!";
         return too_large;
     }
     for (int i = 0; i < result.size(); i++) {
@@ -179,54 +179,87 @@ void print_current_result(const std::vector<int>& current_result) {
 
 // SOLVING FUNCTIONS
 
+void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &buttons, std::vector<int> &current_result, std::unordered_set<int> &ignore) {
+    for (int b = 0; b < buttons.size(); b++) {
+        // Get all indexes from other buttons. Ugly but works.
+        std::unordered_set<int> all_other_button_inds;
+        for (int o = 0; o < buttons.size(); o++) {
+            // Skip the current button
+            if (o == b) {
+                continue;
+            }
+
+            for (int i : buttons[o].indexes) {
+                all_other_button_inds.insert(i);
+            }
+        }
+
+        // Check to see if the current button has any unique indexes
+        for (int but_ind : buttons[b].indexes) {
+            // If index is unique, press that button the required number of times to reach its specified joltage
+            if (all_other_button_inds.count(but_ind) == 0) {
+                std::cout << "Button " << buttons[b] << " has unique index, " << but_ind << ", must press " << target[but_ind] << " times.\n";
+                press_button(current_result, buttons[b], target[but_ind]);
+                ignore.insert(b);
+                // Don't need to press it any more or less times, break
+                break;
+            }
+        }
+    }
+}
+
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
     // We want to start with the biggest buttons and progress to the smallest
     std::sort(buttons.begin(), buttons.end());
 
-    // Keep track of the current result (starts with 0s)
+    // Keep track of the current result (starts with 0s) and buttons to ignore (used later)
     std::vector<int> current_result(target.size(), 0);
+    std::unordered_set<int> ignore;
 
     // Keep track of the current button and backtracking button
     int current_button = 0;
     int backtracking_button = 0;
 
+    // Find buttons with unique indexes and press them first
+    press_unique_buttons(target, buttons, current_result, ignore);
+    std::cout << "Result after pressing unique buttons: ";
+    print_current_result(current_result);
+
     std::cout << "initial current_button: " << buttons[current_button] << '\n';
 
     while (current_button < buttons.size() && backtracking_button < buttons.size()) {
-        print_current_result(current_result);
-
         // If we found a solution, break
         if (current_result == target) {
             break;
         }
 
         // If we are over the target somehow
-        std::unordered_set<int> too_large = result_too_large(current_result, target);
+        std::unordered_set<int> too_large = too_large_indexes(current_result, target);
         if (too_large.size() > 0) {
-            // std::cout << "result is too large, unpressing current button.\n";
-            // // Remove a press from the current button
-            // unpress_button(current_result, buttons[current_button]);
+            std::cout << "result is too large, unpressing current button.\n";
+            // Remove a press from the current button
+            unpress_button(current_result, buttons[current_button]);
 
-            // Unpress the least conspicuous button
-            std::cout << "result is too large, finding a button to unpress: ";
-            // Search through the list of sorted buttons from back to front looking for
-            // first button that stops result too large
-            for (int b = buttons.size() - 1; b >= current_button; b--) {
-                if (buttons[b].presses == 0) {
-                    continue;
-                }
-                for (int bi = 0; bi < buttons[b].indexes.size(); bi++) {
-                    if (too_large.count(buttons[b].indexes[bi]) == 1) {
-                        std::cout << buttons[b] << "\n";
-                        unpress_button(current_result, buttons[b]);
-                        break;
-                    }
-                }
-                too_large = result_too_large(current_result, target);
-                if (too_large.size() == 0) {
-                    break;
-                }
-            }
+            // // Unpress the least conspicuous button
+            // std::cout << "result is too large, finding a button to unpress: ";
+            // // Search through the list of sorted buttons from back to front looking for
+            // // first button that stops result from being too large
+            // for (int b = buttons.size() - 1; b >= current_button; b--) {
+            //     if (buttons[b].presses == 0) {
+            //         continue;
+            //     }
+            //     for (int bi = 0; bi < buttons[b].indexes.size(); bi++) {
+            //         if (too_large.count(buttons[b].indexes[bi]) == 1) {
+            //             std::cout << buttons[b] << "\n";
+            //             unpress_button(current_result, buttons[b]);
+            //             break;
+            //         }
+            //     }
+            //     too_large = too_large_indexes(current_result, target);
+            //     if (too_large.size() == 0) {
+            //         break;
+            //     }
+            // }
 
             // Move to next button
             current_button++;
@@ -234,48 +267,18 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
             // If we run out of buttons before finding a solution, do backtracking
             if (current_button >= buttons.size()) {
                 std::cout << "Finding button to backtrack with...\n";
-                while (backtracking_button < buttons.size()) {
-                    // If backtracking button is already fully backtracked, skip to next candidate
-                    while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
-                        std::cout << "Button " << buttons[backtracking_button] << " can't be used, no presses...\n";
-                        backtracking_button++;
-                    }
-
-                    // If we ran out of backtracking buttons, whoops!
-                    if (backtracking_button == buttons.size()) {
-                        std::cout << "Whoops we ran out of backtracking buttons!\n";
-                        return -1;
-                    }
-
-                    // Check to make sure that this button doesn't uniquely satisfy a requirement
-                    bool use_this_button = true;
-                    std::unordered_set<int> future_indexes = {};
-                    for (int b = backtracking_button + 1; b < buttons.size(); b++) {
-                        for (int i : buttons[b].indexes) {
-                            future_indexes.insert(i);
-                        }
-                    }
-                    for (int bb_i : buttons[backtracking_button].indexes) {
-                        // If this index isn't in any later button, we can't use this button for backtracking
-                        if (future_indexes.count(bb_i) == 0) {
-                            std::cout << "Button " << buttons[backtracking_button] << " has a unique index, can't use...\n";
-                            backtracking_button++;
-                            use_this_button = false;
-                            break;
-                        }
-                    }
-
-                    // Did we finally find our button?
-                    if (use_this_button) {
-                        break;
-                    }
+                // Find first button that can be backtracked
+                while (buttons[backtracking_button].presses == 0 && backtracking_button < buttons.size()) {
+                    std::cout << "Button " << buttons[backtracking_button] << " can't be used, no presses...\n";
+                    backtracking_button++;
                 }
 
-                if (backtracking_button < 0 || backtracking_button >= buttons.size()) {
+                // If we ran out of backtracking buttons, whoops!
+                if (backtracking_button == buttons.size() - 1) {
                     std::cout << "Whoops we ran out of backtracking buttons!\n";
                     return -1;
                 }
-
+                
                 // Decrement backtracking button
                 std::cout << "Decrementing backtracking button: " << buttons[backtracking_button] << '\n';
                 unpress_button(current_result, buttons[backtracking_button]);
@@ -289,6 +292,7 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         // Press button
         std::cout << "Pressing button: " << buttons[current_button] << '\n';
         press_button(current_result, buttons[current_button]);
+        print_current_result(current_result);
     }
 
     // Didn't find a solution
