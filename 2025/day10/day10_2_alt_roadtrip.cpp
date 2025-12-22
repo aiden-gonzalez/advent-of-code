@@ -179,14 +179,29 @@ bool result_too_small(const std::vector<int>& result) {
 
 // SOLVING FUNCTIONS
 
+// try pressing a button as close as we can to the specified amount of times
+void press_valid_times(Button& button, std::vector<int> target, std::vector<int>& current_result, int dist) {
+    press_button(current_result, button, dist);
+    std::cout << "we were " << dist << " away so after that many presses of " << button << ", ";
+    print_current_result(current_result);
+    // Check if any joltage is over
+    for (int ind = 0; ind < target.size(); ind++) {
+        if (current_result[ind] > target[ind]) {
+            unpress_button(current_result, button, current_result[ind] - target[ind]);
+            std::cout << "walk it back for mismatch on index " << ind << " now, ";
+            print_current_result(current_result);
+        }
+    }
+}
+
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
     // Keep track of the current result (starts with 0s)
     std::vector<int> current_result(target.size(), 0);
     // Indices of buttons we should no longer consider pressing
     std::unordered_set<int> ignore_buttons = {};
 
-    // // We want to start with the biggest buttons and progress to the smallest
-    // std::sort(buttons.begin(), buttons.end());
+    // We want to start with the biggest buttons and progress to the smallest
+    std::sort(buttons.begin(), buttons.end());
 
     // Check to make sure that this button doesn't uniquely satisfy a requirement
     for (int eval = 0; eval < buttons.size(); eval++) {
@@ -202,7 +217,7 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         }
         // Check the button we're evaluating against all other button indices
         for (int be : buttons[eval].indexes) {
-            // If this index isn't in any later button, we must press that button the amount of times to reach its joltage
+            // If this index isn't in any other button, we must press that button the amount of times to reach its joltage
             if (all_other_button_inds.count(be) == 0) {
                 std::cout << "Button " << buttons[eval] << " has unique index, " << be << ", must press " << target[be] << " times.\n";
                 press_button(current_result, buttons[eval], target[be]);
@@ -259,14 +274,43 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     }
 
     // Try pressing any button in the list of possible max jolt manipulators
-    for (int i = 0; i < inds_buttons_for_max.size(); i++) {
-        int dist = max_jolt - current_result[inds_manip_max_jolt[i]];
-        press_button(current_result, buttons[inds_buttons_for_max[i]], dist);
-        std::cout << "we were " << dist << " away so after that many presses, " << current_result << "\n";
-    }
-
-
-
+    std::vector<int> cr;
+    std::vector<Button> btns;
+    int dist;
+    do {
+        std::cout << "New order of buttons.\n";
+        cr = current_result;
+        btns = buttons;
+        // Try reaching max presses by pressing each button 
+        for (int incr = 0; incr < max_jolt; incr++) {
+            for (int i = 0; i < inds_buttons_for_max.size(); i++) {
+                // TODO: actually should use dist to find the distance between min number in target at an index manipulated by that button
+                dist = max_jolt - cr[inds_manip_max_jolt[i]];
+                if (i == 0) {
+                    dist -= incr;
+                    std::cout << "Try a smaller number of presses on the first.\n";
+                }
+                if (dist > 0) {
+                    press_valid_times(btns[inds_buttons_for_max[i]],target,cr,dist);
+                }
+                if (cr == target) {
+                    break;
+                }
+            }
+            if (cr == target) {
+                break;
+            }
+            // Try pressing less than the max distance
+            cr = current_result;
+            btns = buttons;
+        }
+        if (cr == target) {
+            break;
+        }
+    } while (std::next_permutation(inds_buttons_for_max.begin(),inds_buttons_for_max.end()));
+    current_result = cr;
+    buttons = btns;
+    // TODO: need to take each possible option and try to figure out how to use leftover funtions to producce the result
 
     // Didn't find a solution
     if (current_result != target) {
@@ -285,7 +329,7 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         std::cout << button << " pressed " << button.presses << " times; ";
         sum += button.presses;
     }
-    std::cout << '\n';
+    std::cout << "TOTAL: "<< sum <<"\n";
     return sum;
 }
 
