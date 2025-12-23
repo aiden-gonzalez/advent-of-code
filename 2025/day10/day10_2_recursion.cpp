@@ -171,6 +171,17 @@ int press_max_times(std::vector<int>& result, const std::vector<int>& target, Bu
 
 // RESULT CHECKING FUNCTIONS
 
+bool result_is_empty(const std::vector<int>& result) {
+    bool empty = true;
+    for (int i = 0; i < result.size(); i++) {
+        if (result[i] != 0) {
+            empty = false;
+            break;
+        }
+    }
+    return empty;
+}
+
 std::unordered_set<int> too_large_indexes(const std::vector<int> &result, const std::vector<int> &target) {
     std::unordered_set<int> too_large;
     // Complain and return true if they aren't the same size
@@ -269,7 +280,7 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
 
     // If this button is ignored, skip it
     if (ignore.count(current_button) == 1) {
-        std::cout << "Current button is ignored, skipping it\n";
+        std::cout << "Current button " << current_button << ' ' << buttons[current_button] << " is ignored, skipping it...\n";
         return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
     }
 
@@ -296,9 +307,11 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     // Find buttons with unique indexes and press them first
     press_unique_buttons(target, buttons, current_result, ignore);
-    std::cout << "After pressing unique buttons, ";
-    print_current_result(current_result);
-
+    if (!result_is_empty(current_result)) {
+        std::cout << "After pressing unique buttons, ";
+        print_current_result(current_result);
+    }
+    
     // Start recursion on first button
     int min_presses = 1000000;
     solve_machine_helper(target, buttons, ignore, current_result, 0, min_presses);
