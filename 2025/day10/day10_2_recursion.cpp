@@ -212,7 +212,6 @@ void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &b
     do {
         unique_button_found = false;
         for (int b = 0; b < buttons.size(); b++) {
-            std::cout << "Considering for unique: " << buttons[b] << '\n';
             // If button is already ignored, don't investigate it for unique indexes
             if (ignore.count(b) == 1) {
                 continue;
@@ -248,46 +247,38 @@ void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &b
     } while (unique_button_found);    
 }
 
-bool solve_machine_helper(const std::vector<int>& target, std::vector<Button>& buttons, const std::unordered_set<int> &ignore, std::vector<int> &current_result, int current_button) {
-    // If this problem is solved, return true
+void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& buttons, const std::unordered_set<int> &ignore, std::vector<int> &current_result, int current_button, int &min_presses) {
+    // If this problem is solved, set min_presses if necessary and return
     if (current_result == target) {
-        std::cout << "Problem is solved, returning true\n";
-        return true;
+        min_presses = std::min(min_presses, sum_up_buttons(buttons));
+        std::cout << "Problem is solved, min_presses is now " << min_presses << ".\n";
+        return;
     }
 
-    // If current button is out of range, return false
+    // If current button is out of range, return
     if (current_button == buttons.size()) {
-        std::cout << "Current button out of range, returning false\n";
-        return false;
+        std::cout << "Current button out of range, returning...\n";
+        return;
     }
 
     // If this button is ignored, skip it
     if (ignore.count(current_button) == 1) {
         std::cout << "Current button is ignored, skipping it\n";
-        return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1);
+        return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
     }
 
     // For this button, press as many times as possible
-    int presses = press_max_times(current_result, target, buttons[current_button]);
-    std::cout << "Button " << current_button << " " << buttons[current_button] << " pressed " << presses << " times.\n";
+    int max_button_presses = press_max_times(current_result, target, buttons[current_button]);
+    std::cout << "Button " << current_button << " " << buttons[current_button] << " pressed " << max_button_presses << " times.\n";
     print_current_result(current_result);
 
-    // If we are at the last button already, return
-    if (current_button == buttons.size() - 1) {
-        return current_result == target;
-    }
-
-    // Now use recursion to solve rest of problem and back off this button gradually as needed
-    // TODO instead of backing off, just start with 0 presses and increment up each time? And ignore it before the loop and unignore after the loop.
-    // That way we brute force more effectively? idk. Secondary to the unique indexes improvement.
-    bool solved = solve_machine_helper(target, buttons, ignore, current_result, current_button + 1);
-    while (!solved && buttons[current_button].presses > 0) {
+    // Now use recursion to back off this button gradually and find all possible solutions
+    solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+    while (buttons[current_button].presses > 0) {
         unpress_button(current_result, buttons[current_button]);
         std::cout << "Button " << current_button << " " << buttons[current_button] << " unpressed.\n";
-        solved = solve_machine_helper(target, buttons, ignore, current_result, current_button + 1);
+        solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
     }
-
-    return solved;
 }
 
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
@@ -304,16 +295,16 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     print_current_result(current_result);
 
     // Start recursion on first button
-    bool solved = solve_machine_helper(target, buttons, ignore, current_result, 0);
+    int min_presses = 1000000;
+    solve_machine_helper(target, buttons, ignore, current_result, 0, min_presses);
 
     // Didn't find a solution
-    if (!solved) {
+    if (min_presses == 1000000) {
         std::cout << "Didn't find a solution, returning -1.\n";
         return -1;
     }
 
     // Otherwise return sum of button presses
-    int sum = 0;
     std::cout << "Solution found: ";
     for (const auto & button : buttons) {
         if (button.presses == 0) {
@@ -321,8 +312,8 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         }
 
         std::cout << button << " pressed " << button.presses << " times; ";
-        sum += button.presses;
     }
+    int sum = sum_up_buttons(buttons);
     std::cout << "TOTAL: " << sum << '\n';
     return sum;
 }
@@ -337,7 +328,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("super_simple_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
