@@ -290,11 +290,16 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
         press_button(current_result, buttons[current_button]);
         print_current_result(current_result);
         solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
-        // Reset all later buttons for the next press iteration
-        for (int r = current_button + 1; r < buttons.size(); r++) {
-            reset_button(current_result, buttons[r]);
+        // Reset all later buttons for the next press iteration if this isn't the last button
+        if (current_button < buttons.size() - 1) {
+            std::cout << "Resetting all buttons after " << current_button << " " << buttons[current_button] << "...\n";
+            for (int r = current_button + 1; r < buttons.size(); r++) {
+                reset_button(current_result, buttons[r]);
+            }
+            print_current_result(current_result);
         }
     }
+    std::cout << "Some index(es) too large, going back in recursion\n";
 }
 
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
