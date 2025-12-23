@@ -401,6 +401,10 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
             max_joltage = joltage;
         }
     }
+
+    // Note: I tried a "smarter" approach where it also considered how much each index could actually be
+    // increased if it was present. I didn't notice any speedups.  So I removed it to reduce complexity
+    // and potential overhead.
     
     // Start recursion on first button
     int min_presses = 1000000;
@@ -496,6 +500,12 @@ int main() {
             }
             std::cout << '\n';
         }
+
+        // Spot checking:
+        // - Machine 12 should be 186
+        // - Machine 13 should be 59
+        // - Machine 14 should be 54
+        // - Machine 15 should be 251 or less? But probably less.
 
         // Sum up the solutions
         int sum = 0;
