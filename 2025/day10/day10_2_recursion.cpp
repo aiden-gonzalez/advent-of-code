@@ -257,7 +257,6 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
 
     // If current button is out of range, return
     if (current_button == buttons.size()) {
-        std::cout << "Current button out of range, returning...\n";
         return;
     }
 
@@ -272,12 +271,16 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
     std::cout << "Button " << current_button << " " << buttons[current_button] << " pressed " << max_button_presses << " times.\n";
     print_current_result(current_result);
 
-    // Now use recursion to back off this button gradually and find all possible solutions
+    // Move to next button
     solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
-    while (buttons[current_button].presses > 0) {
-        unpress_button(current_result, buttons[current_button]);
-        std::cout << "Button " << current_button << " " << buttons[current_button] << " unpressed.\n";
-        solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+
+    // If this is not last button, back off gradually and find all possible solutions
+    if (current_button < buttons.size() - 1) {
+        while (buttons[current_button].presses > 0) {
+            unpress_button(current_result, buttons[current_button]);
+            std::cout << "Button " << current_button << " " << buttons[current_button] << " unpressed.\n";
+            solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+        }
     }
 }
 
@@ -304,18 +307,8 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         return -1;
     }
 
-    // Otherwise return sum of button presses
-    std::cout << "Solution found: ";
-    for (const auto & button : buttons) {
-        if (button.presses == 0) {
-            continue;
-        }
-
-        std::cout << button << " pressed " << button.presses << " times; ";
-    }
-    int sum = sum_up_buttons(buttons);
-    std::cout << "TOTAL: " << sum << '\n';
-    return sum;
+    // Otherwise return min presses
+    return min_presses;
 }
 
 // DRIVER CODE
@@ -328,7 +321,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("super_simple_input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
