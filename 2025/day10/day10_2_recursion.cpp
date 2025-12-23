@@ -397,9 +397,18 @@ void solve_machine_helper(
         // First consider: do all the later buttons fail to address a needed increase in any index?
         // To check this, we will see if any too-low indexes are missing from the set of all later button indexes
         std::set<int> small_indexes = too_small_indexes(current_result, target);
-        std::set<int> all_future_indexes = later_indexes.at(current_button);
-        std::vector<int> missing_indexes;
-        std::set_difference(small_indexes.begin(), small_indexes.end(), all_future_indexes.begin(), all_future_indexes.end(), std::back_inserter(missing_indexes));
+        std::unordered_map<int, int> all_future_indexes = later_indexes.at(current_button);
+        std::unordered_set<int> missing_indexes;
+        for (const int sm_i : small_indexes) {
+            // If index is missing entirely
+            if (all_future_indexes.count(sm_i) == 0) {
+                missing_indexes.insert(sm_i);
+                break;
+            // Otherwise if 
+            } else if (all_future_indexes.at(sm_i) < target[sm_i]) {
+
+            }
+        }
         // Only do recursion if it's possible for later buttons to generate a solution
         if (missing_indexes.size() == 0) {
             solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, best_possible, later_indexes);
@@ -446,18 +455,6 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         print_current_result(current_result);
     }
 
-    // For each position, map out all indexes contained by later buttons
-    std::unordered_map<int, std::set<int>> later_indexes;
-    for (int b = 0; b < buttons.size(); b++) {
-        std::set<int> idxs;
-        for (int bl = b + 1; bl < buttons.size(); bl++) {
-            for (const int ind : buttons[bl].indexes) {
-                idxs.insert(ind);
-            }
-        }
-        later_indexes[b] = idxs;
-    }
-    
     // Find max joltage (best possible solution)
     int max_joltage = 0;
     for (const int joltage : target) {
@@ -468,6 +465,31 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     // Best possible solution is the maximum joltage less any presses we have already done
     int best_possible_solution = max_joltage - unique_button_presses;
+
+    // Next gen of this idea below: do press max on each button. observe maximums.
+
+    // For each button position, map out all maximum supported values for each index contained by later buttons
+    std::unordered_map<int, std::unordered_map<int, int>> later_indexes;
+    for (int b = 0; b < buttons.size(); b++) {
+        // Map of indexes to their current maximum supported value
+        std::unordered_map<int, int> idxs_max;
+        std::vector<int> buttons_result(target.size(), 0);
+        for (int bl = b + 1; bl < buttons.size(); bl++) {
+            // Initialize indexes in map
+            for (const int but_ind : buttons[bl].indexes) {
+                if (idxs_max.count(but_ind) == 0) {
+                    idxs_max[but_ind] = 0;
+                }
+            } 
+            // Press button max number of times
+            press_max_times(buttons_result, target, buttons[bl]);
+        }
+        // Save maximums
+        for (const auto& idx : idxs_max) {
+            idxs_max[idx.first] = buttons_result[idx.first];
+        }
+        later_indexes[b] = idxs_max;
+    }
     
     // Start recursion on first button
     int min_presses = 1000000;
