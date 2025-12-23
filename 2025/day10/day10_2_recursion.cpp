@@ -353,7 +353,7 @@ void solve_machine_helper(
             }
             // Then press button just once
             press_button(current_result, buttons[current_button]);
-            if (current_button < buttons.size() - 9) {
+            if (current_button < ((int)buttons.size() - 9)) {
                 print_current_buttons(buttons);
             }
         } else {
