@@ -277,12 +277,10 @@ void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &b
 }
 
 void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& buttons, const std::unordered_set<int> &ignore, std::vector<int> &current_result, int current_button, int &min_presses) {
-    print_current_buttons(buttons);
-    
     // If this problem is solved, set min_presses if necessary
     if (current_result == target) {
         min_presses = std::min(min_presses, sum_up_buttons(buttons));
-        //std::cout << "Solution found, min_presses is now " << min_presses << ".\n";
+        std::cout << "Solution found, min_presses is now " << min_presses << ".\n";
     }
 
     // If current button is out of range, return
@@ -292,7 +290,6 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
 
     // If this button is ignored, skip it
     if (ignore.count(current_button) == 1) {
-        //std::cout << "Current button " << current_button << ' ' << buttons[current_button] << " is ignored, skipping it...\n";
         return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
     }
 
@@ -303,23 +300,25 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
         // If this isn't the last button
         if (current_button < buttons.size() - 1) {
             // Reset all later buttons (that aren't ignored) for the next press iteration
-            //std::cout << "Resetting all buttons after " << current_button << " " << buttons[current_button] << "...\n";
             for (int r = current_button + 1; r < buttons.size(); r++) {
                 if (ignore.count(r) == 0) {
                     reset_button(current_result, buttons[r]);
                 }
             }
-            //print_current_result(current_result);
             // Then press button just once
-            //std::cout << "Pressing button " << current_button << " " << buttons[current_button] << "...\n";
             press_button(current_result, buttons[current_button]);
+            if (current_button < buttons.size() - 6) {
+                print_current_buttons(buttons);
+            }
         } else {
             // Otherwise, press button max times (slight speed up)
             press_max_times(current_result, target, buttons[current_button]);
+            // This will log a potential solution then return
+            solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+            // Since we know one more press would fail and then exit, lets just break here instead
+            break;
         }
-        //print_current_result(current_result);
     }
-    //std::cout << "Some index(es) too large, going back in recursion\n";
 }
 
 int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) {
