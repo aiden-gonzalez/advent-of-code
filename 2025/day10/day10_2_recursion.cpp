@@ -110,7 +110,7 @@ class Machine {
 };
 
 std::ostream & operator<<(std::ostream & os, Machine const & m) {
-    os << "Machine: [" << m.ind_lights << "] ";
+    os << "[" << m.ind_lights << "] ";
     for (const auto & button : m.buttons) {
         os << button << ' ';
     }
@@ -488,7 +488,7 @@ int main() {
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
-            std::cout << "Solving machine: " << machines[m] << "...\n";
+            std::cout << "Solving machine " << m + 1 << ": " << machines[m] << "...\n";
             machines[m].min_presses = solve_machine(machines[m].joltages, machines[m].buttons);
             if (machines[m].min_presses == -1) {
                 std::cout << "Warning: Couldn't solve! Failed on machine " << m + 1 << ".\n";
