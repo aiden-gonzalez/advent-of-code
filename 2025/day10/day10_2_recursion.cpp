@@ -131,6 +131,14 @@ void unpress_button(std::vector<int>& result, Button& button, int num_presses = 
     button.presses -= num_presses;
 }
 
+void reset_button(std::vector<int>& result, Button& button) {
+    // Fully unpress all of the referenced indexes
+    for (const int ind : button.indexes) {
+        result[ind] -= button.presses;
+    }
+    button.presses = 0;
+}
+
 void press_button(std::vector<int>& result, Button& button, int num_presses = 1) {
     // Increment the referenced indexes
     for (const int ind : button.indexes) {
@@ -248,11 +256,10 @@ void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &b
 }
 
 void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& buttons, const std::unordered_set<int> &ignore, std::vector<int> &current_result, int current_button, int &min_presses) {
-    // If this problem is solved, set min_presses if necessary and return
+    // If this problem is solved, set min_presses if necessary
     if (current_result == target) {
         min_presses = std::min(min_presses, sum_up_buttons(buttons));
-        std::cout << "Problem is solved, min_presses is now " << min_presses << ".\n";
-        return;
+        std::cout << "Solution found, min_presses is now " << min_presses << ".\n";
     }
 
     // If current button is out of range, return
@@ -266,20 +273,15 @@ void solve_machine_helper(const std::vector<int>& target, std::vector<Button>& b
         return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
     }
 
-    // For this button, press as many times as possible
-    int max_button_presses = press_max_times(current_result, target, buttons[current_button]);
-    std::cout << "Button " << current_button << " " << buttons[current_button] << " pressed " << max_button_presses << " times.\n";
-    print_current_result(current_result);
-
-    // Move to next button
-    solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
-
-    // If this is not last button, back off gradually and find all possible solutions
-    if (current_button < buttons.size() - 1) {
-        while (buttons[current_button].presses > 0) {
-            unpress_button(current_result, buttons[current_button]);
-            std::cout << "Button " << current_button << " " << buttons[current_button] << " unpressed.\n";
-            solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+    // Do button pressing recursion
+    while (too_large_indexes(current_result, target).size() == 0) {
+        std::cout << "Pressing button " << current_button << " " << buttons[current_button] << "...\n";
+        press_button(current_result, buttons[current_button]);
+        print_current_result(current_result);
+        solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses);
+        // Reset all later buttons for the next press iteration
+        for (int r = current_button + 1; r < buttons.size(); r++) {
+            reset_button(current_result, buttons[r]);
         }
     }
 }
