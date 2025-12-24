@@ -317,21 +317,20 @@ int sum_up_buttons(const std::vector<Button>& buttons) {
 
 // SOLVING FUNCTIONS
 
-void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &buttons, std::vector<int> &current_result, std::unordered_set<int> &ignore) {
+int press_unique_buttons(const std::vector<int> &target, std::vector<Button> &buttons, std::vector<int> &current_result) {
+    // Keep track of and return the number of times we press any button in this function
+    int unique_button_presses = 0;
+
+    // Keep going until we can no longer find any buttons to set and remove
     bool unique_button_found;
     do {
         unique_button_found = false;
         for (int b = 0; b < buttons.size(); b++) {
-            // If button is already ignored, don't investigate it for unique indexes
-            if (ignore.count(b) == 1) {
-                continue;
-            }
-
-            // Get all indexes from other buttons. Ugly but works.
+            // Get all indexes from other buttons
             std::unordered_set<int> all_other_button_inds;
             for (int o = 0; o < buttons.size(); o++) {
-                // Skip the current button or ignored buttons
-                if (o == b || ignore.count(o) == 1) {
+                // Skip the current button
+                if (o == b) {
                     continue;
                 }
 
@@ -342,25 +341,35 @@ void press_unique_buttons(const std::vector<int> &target, std::vector<Button> &b
 
             // Check to see if the current button has any unique indexes
             for (int but_ind : buttons[b].indexes) {
-                // If index is unique, press that button the required number of times to reach its specified joltage
+                // If this index is unique, press the button the required number of times to reach the specified joltage
                 if (all_other_button_inds.count(but_ind) == 0) {
                     unique_button_found = true;
                     int num_presses = press_max_times(current_result, target, buttons[b]);
+                    unique_button_presses += num_presses;
                     std::cout << "Button " << buttons[b] << " has unique index, " << but_ind << ", pressed " << num_presses << " times.\n";
-                    ignore.insert(b);
+
+                    // Remove this button from the list of all buttons
+                    buttons.erase(buttons.begin() + b);
+
                     // Don't need to press it any more or less times, break
                     break;
                 }
             }
+            // If we just found a unique index and erased a button, lets continue to the next iteration.
+            // It'd be good to avoid continuing iteration on a list we just modified.
+            if (unique_button_found) {
+                continue;
+            }
         }
     // Repeat unique button finding process until no more unique buttons are found
     } while (unique_button_found);    
+
+    return unique_button_presses;
 }
 
 void solve_machine_helper(
     const std::vector<int>& target,
     std::vector<Button>& buttons,
-    const std::unordered_set<int> &ignore,
     std::vector<int> &current_result,
     int current_button,
     int &min_presses,
@@ -383,11 +392,6 @@ void solve_machine_helper(
         return;
     }
 
-    // If this button is ignored, skip it
-    if (ignore.count(current_button) == 1) {
-        return solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
-    }
-
     // Do button pressing recursion
     while (too_large_indexes(current_result, target).size() == 0) {
         // First consider: do all the later buttons fail to address a needed increase in any index?
@@ -398,7 +402,7 @@ void solve_machine_helper(
         std::set_difference(small_indexes.begin(), small_indexes.end(), all_future_indexes.begin(), all_future_indexes.end(), std::back_inserter(missing_indexes));
         // Only do recursion if it's possible for later buttons to generate a solution
         if (missing_indexes.size() == 0) {
-            solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
+            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
         }
 
         // If our solution is already as optimal as possible, quit
@@ -408,11 +412,9 @@ void solve_machine_helper(
 
         // If this isn't the last button
         if (current_button < buttons.size() - 1) {
-            // Reset all later buttons (that aren't ignored) for the next press iteration
+            // Reset all later buttons for the next press iteration
             for (int r = current_button + 1; r < buttons.size(); r++) {
-                if (ignore.count(r) == 0) {
-                    reset_button(current_result, buttons[r]);
-                }
+                reset_button(current_result, buttons[r]);
             }
             // Then press button just once
             press_button(current_result, buttons[current_button]);
@@ -423,7 +425,7 @@ void solve_machine_helper(
             // Otherwise, press button max times (slight speed up)
             press_max_times(current_result, target, buttons[current_button]);
             // This will log a potential solution then return
-            solve_machine_helper(target, buttons, ignore, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
+            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
             // Since we know one more press would fail and then exit, lets just break here instead
             break;
         }
@@ -436,10 +438,9 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
 
     // Keep track of the current result (starts with 0s) and buttons to ignore (used later)
     std::vector<int> current_result(target.size(), 0);
-    std::unordered_set<int> ignore;
 
     // Find buttons with unique indexes and press them first
-    press_unique_buttons(target, buttons, current_result, ignore);
+    int unique_button_presses = press_unique_buttons(target, buttons, current_result);
     if (!result_is_empty(current_result)) {
         std::cout << "After pressing unique buttons, ";
         print_current_result(current_result);
@@ -467,7 +468,7 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
     
     // Start recursion on first button
     int min_presses = 1000000;
-    solve_machine_helper(target, buttons, ignore, current_result, 0, min_presses, max_joltage, later_indexes);
+    solve_machine_helper(target, buttons, current_result, 0, min_presses, max_joltage, later_indexes);
 
     // Didn't find a solution
     if (min_presses == 1000000) {
@@ -475,8 +476,8 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
         return -1;
     }
 
-    // Otherwise return min presses
-    return min_presses;
+    // Otherwise return unique button presses + min presses
+    return unique_button_presses + min_presses;
 }
 
 // DRIVER CODE
@@ -489,7 +490,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
