@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 /*
     Part 2:
@@ -105,6 +106,20 @@ class Machine {
         int min_presses;
         std::vector<int> joltages;
 
+        // Disjoint sets decomposition of buttons
+        std::vector<std::vector<Button>> button_groups;
+
+        void print_button_groups() {
+            for (size_t g = 0; g < button_groups.size(); g++) {
+                std::cout << "Group " << g << ":\n";
+                for (const auto& s : button_groups[g]) {
+                    std::cout << "  { ";
+                    for (int val : s.indexes) std::cout << val << " ";
+                    std::cout << "}\n";
+                }
+            }
+        }
+
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Machine & m);
 };
@@ -120,6 +135,54 @@ std::ostream & operator<<(std::ostream & os, Machine const & m) {
     }
     os << m.joltages[m.joltages.size() - 1] << "} -> " << m.min_presses;
     return os;
+}
+
+// DISJOINT SET CODE
+struct DSU {
+    std::vector<int> parent;
+    DSU(int n) : parent(n) { std::iota(parent.begin(), parent.end(), 0); }
+    
+    int find(int i) {
+        if (parent[i] == i) return i;
+        return parent[i] = find(parent[i]);
+    }
+
+    void unite(int i, int j) {
+        int root_i = find(i);
+        int root_j = find(j);
+        if (root_i != root_j) parent[root_i] = root_j;
+    }
+};
+
+std::vector<std::vector<Button>> groupSets(std::vector<Button>& input) {
+    int n = input.size();
+    DSU dsu(n);
+    std::unordered_map<int, int> elementToFirstSetIndex;
+
+    // 1. Build relationships between set indices
+    for (int i = 0; i < n; i++) {
+        for (int ind : input[i].indexes) {
+            if (elementToFirstSetIndex.count(ind)) {
+                // If this number was seen in a previous Button, join this Button with that one
+                dsu.unite(i, elementToFirstSetIndex[ind]);
+            } else {
+                elementToFirstSetIndex[ind] = i;
+            }
+        }
+    }
+
+    // 2. Group the original Buttons using their root index
+    std::unordered_map<int, std::vector<Button>> groups;
+    for (int i = 0; i < n; ++i) {
+        groups[dsu.find(i)].push_back(input[i]);
+    }
+
+    // 3. Convert map to final nested list
+    std::vector<std::vector<Button>> result;
+    for (auto& group : groups) {
+        result.push_back(std::move(group.second));
+    }
+    return result;
 }
 
 // BUTTON PRESSING FUNCTIONS
@@ -485,6 +548,17 @@ int main() {
 
             machines.push_back(Machine(indicator, buttons, joltages));
         }
+
+        // Using disjoint set algorithms, split up machines if possible
+        for (int m = 0; m < machines.size(); m++) {
+            machines[m].button_groups = groupSets(machines[m].buttons);
+            if (machines[m].button_groups.size() > 1) {
+                std::cout << "Machine " << m + 1 << " number of button groups: " << machines[m].button_groups.size() << '\n';
+                machines[m].print_button_groups();
+            }
+        }
+
+        // TODO do actual machine splitting
 
         // Find the solution for each machine
         for (int m = 0; m < machines.size(); m++) {
