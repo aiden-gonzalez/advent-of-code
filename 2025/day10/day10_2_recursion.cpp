@@ -373,7 +373,7 @@ void solve_machine_helper(
     std::vector<int> &current_result,
     int current_button,
     int &min_presses,
-    int &max_joltage,
+    int &best_possible,
     const std::unordered_map<int, std::set<int>> &later_indexes
 ) {
     // If this problem is solved, set min_presses if necessary
@@ -381,7 +381,7 @@ void solve_machine_helper(
         min_presses = std::min(min_presses, sum_up_buttons(buttons));
         std::cout << "Solution found, min_presses is now " << min_presses << ".\n";
         // If this is already the best possible outcome
-        if (min_presses == max_joltage) {
+        if (min_presses == best_possible) {
             std::cout << "No more solving needed, this solution is already optimal.\n";
             return;
         }
@@ -402,11 +402,11 @@ void solve_machine_helper(
         std::set_difference(small_indexes.begin(), small_indexes.end(), all_future_indexes.begin(), all_future_indexes.end(), std::back_inserter(missing_indexes));
         // Only do recursion if it's possible for later buttons to generate a solution
         if (missing_indexes.size() == 0) {
-            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
+            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, best_possible, later_indexes);
         }
 
         // If our solution is already as optimal as possible, quit
-        if (min_presses == max_joltage) {
+        if (min_presses == best_possible) {
             return;
         }
 
@@ -418,14 +418,14 @@ void solve_machine_helper(
             }
             // Then press button just once
             press_button(current_result, buttons[current_button]);
-            if (current_button < ((int)buttons.size() - 9)) {
+            if (current_button < ((int)buttons.size() / 3)) {
                 print_current_buttons(buttons);
             }
         } else {
             // Otherwise, press button max times (slight speed up)
             press_max_times(current_result, target, buttons[current_button]);
             // This will log a potential solution then return
-            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, max_joltage, later_indexes);
+            solve_machine_helper(target, buttons, current_result, current_button + 1, min_presses, best_possible, later_indexes);
             // Since we know one more press would fail and then exit, lets just break here instead
             break;
         }
@@ -465,10 +465,13 @@ int solve_machine(const std::vector<int> &target, std::vector<Button> &buttons) 
             max_joltage = joltage;
         }
     }
+
+    // Best possible solution is the maximum joltage less any presses we have already done
+    int best_possible_solution = max_joltage - unique_button_presses;
     
     // Start recursion on first button
     int min_presses = 1000000;
-    solve_machine_helper(target, buttons, current_result, 0, min_presses, max_joltage, later_indexes);
+    solve_machine_helper(target, buttons, current_result, 0, min_presses, best_possible_solution, later_indexes);
 
     // Didn't find a solution
     if (min_presses == 1000000) {
@@ -490,7 +493,7 @@ int main() {
     std::vector<int> presses;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
