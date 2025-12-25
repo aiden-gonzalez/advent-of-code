@@ -43,11 +43,13 @@ struct std::hash<Node> {
     }
 };
 
-void dfs(Node* root, std::string target, int &count, bool dac_seen, bool fft_seen) {
+void dfs(Node* root, std::string start, std::string target, int &count, bool dac_seen, bool fft_seen) {
     // If we have reached the target AND dac and fft were seen, increment the count
     if (root->name == target && dac_seen && fft_seen) {
         count++;
         std::cout << "Count is now: " << count << '\n';
+        // Don't traverse any further (just in case)
+        return;
     }
 
     // If this is dac
@@ -62,7 +64,22 @@ void dfs(Node* root, std::string target, int &count, bool dac_seen, bool fft_see
 
     // Traverse the cables
     for (int c = 0; c < root->cables.size(); c++) {
-        dfs(root->cables[c], target, count, dac_seen, fft_seen);
+        // If we have already seen dac, don't visit it again (avoid cycle)
+        if (dac_seen && root->cables[c]->name == "dac") {
+            continue;
+        }
+
+        // If we have already seen fft, don't visit it again (avoid cycle)
+        if (fft_seen && root->cables[c]->name == "fft") {
+            continue;
+        }
+
+        // Don't go to the starting node again (avoid potential cycle)
+        if (root->cables[c]->name == start) {
+            continue;
+        }
+
+        dfs(root->cables[c], start, target, count, dac_seen, fft_seen);
     }
 }
 
@@ -122,7 +139,7 @@ int main() {
         // Find number of paths from node "svr" to node "out"
         Node* svr = nodes.at("svr");
         int num_paths = 0;
-        dfs(svr, "out", num_paths, false, false);
+        dfs(svr, "svr", "out", num_paths, false, false);
 
         std::cout << "Number of paths: " << num_paths << '\n';
 
