@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 /*
     There are devices with names. And each line of the input says what other devices
@@ -29,7 +31,19 @@ std::ostream & operator<<(std::ostream & os, Node const & n) {
         os << ' ' << n.cables[i]->name;
     }
     return os;
-} 
+}
+
+template<>
+struct std::hash<Node> {
+    std::size_t operator()(const Node& n) const noexcept {
+        std::size_t result = std::hash<std::string>()(n.name);
+        for (int i = 0; i < n.cables.size(); i++) {
+            const std::size_t hash = std::hash<std::string>()(n.cables[i]->name);
+            result = result ^ hash << i;
+        }
+        return result;
+    }
+};
 
 int main() {
     std::string line;
@@ -45,7 +59,9 @@ int main() {
         while (getline(input_file, line)) {
             // First just fill up list of nodes
             std::string node_name = line.substr(0, line.find(':'));
-            nodes[node_name] = Node(node_name);
+            Node new_node = Node(node_name);
+            std::cout << new_node << '\n';
+            nodes[node_name] = new_node;
         }
 
         // Go back to beginning of file
