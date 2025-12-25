@@ -45,6 +45,18 @@ struct std::hash<Node> {
     }
 };
 
+void dfs(Node* root, std::string target, int &count) {
+    // If we have reached the target, increment the count
+    if (root->name == target) {
+        count++;
+    }
+
+    // Traverse the cables
+    for (int c = 0; c < root->cables.size(); c++) {
+        dfs(root->cables[c], target, count);
+    }
+}
+
 int main() {
     std::string line;
     std::ifstream input_file;
@@ -52,7 +64,7 @@ int main() {
     std::unordered_map<std::string, Node*> nodes;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -97,6 +109,13 @@ int main() {
                 std::cout << *node.second << '\n';
             }
         }
+
+        // Find number of paths from node "you" to node "out"
+        Node* you = nodes.at("you");
+        int num_paths = 0;
+        dfs(you, "out", num_paths);
+
+        std::cout << "Number of paths: " << num_paths << '\n';
 
         // Free all created nodes
         for (const auto& node : nodes) {
