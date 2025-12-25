@@ -49,7 +49,7 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
-    std::unordered_map<std::string, Node> nodes;
+    std::unordered_map<std::string, Node*> nodes;
 
     // Open input file
     input_file.open("example_input.txt");
@@ -59,33 +59,48 @@ int main() {
         while (getline(input_file, line)) {
             // First just fill up list of nodes
             std::string node_name = line.substr(0, line.find(':'));
-            Node new_node = Node(node_name);
-            std::cout << new_node << '\n';
-            nodes[node_name] = new_node;
+            nodes[node_name] = new Node(node_name);
         }
 
         // Go back to beginning of file
         input_file.clear();
         input_file.seekg(0);
 
+        // Also add "out" node
+        nodes["out"] = new Node("out");
+
         // Now read in cable connections
         while (getline(input_file, line)) {
-            Node root = nodes.at(line.substr(0, line.find(':')));
+            Node* root = nodes.at(line.substr(0, line.find(':')));
             int node_start = line.find(' ') + 1;
             int node_end = line.find(' ', node_start) - 1;
+            if (node_end < 0) {
+                node_end = line.size() - 1;
+            }
             do {
                 // Grab node name and add the address of that node to cable connections
                 std::string node_name = line.substr(node_start, node_end - node_start + 1);
-                root.cables.push_back(&nodes.at(node_name));
+                root->cables.push_back(nodes.at(node_name));
 
                 // Identify next node
                 node_start = node_end + 2;
                 node_end = line.find(' ', node_start) - 1;
+                if (node_end < 0) {
+                    node_end = line.size() - 1;
+                }
             } while (node_start < line.size());
         }
 
+        // Print out nodes for check
         for (const auto& node : nodes) {
-            std::cout << node.second << '\n';
+            if (node.first != "out") {
+                std::cout << *node.second << '\n';
+            }
+        }
+
+        // Free all created nodes
+        for (const auto& node : nodes) {
+            delete node.second;
         }
 
         input_file.close();
