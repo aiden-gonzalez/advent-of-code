@@ -56,11 +56,11 @@ void print_path(std::vector<std::string>& path, std::string last_node = "") {
 }
 
 // Simple one target
-void dfs(Node* root, std::string start, std::string target, int &count) {
+void dfs(Node* root, std::string& start, std::string& target, int &count) {
     // If we have reached the target, increment the count
     if (root->name == target) {
         count++;
-        //std::cout << "Count is now: " << count << '\n';
+        std::cout << "Count is now: " << count << '\n';
         // Don't traverse any further (just in case)
         return;
     }
@@ -241,7 +241,7 @@ int main() {
         long p2 = ((long)svr_fft * (long)fft_dac * (long)dac_out);
         long paths = p1 + p2;
 
-        std::cout << paths << " <- Answer\n";
+        std::cout << paths << " paths\n";
 
         // Free all created nodes
         for (const auto& node : nodes) {
