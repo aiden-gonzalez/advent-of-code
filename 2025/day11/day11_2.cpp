@@ -77,7 +77,28 @@ void dfs(Node* root, std::string& start, std::string& target, int &count) {
 }
 
 // Two target (no cycle detection)
-// TODO
+void dfs(Node* root, std::string target_one, std::string target_two, int &count_one, int &count_two) {
+    // If we have found one of the targets, increment the appropriate count and stop
+    if (root->name == target_one) {
+        count_one++;
+        if (count_one % 1000 == 0) {
+            std::cout << "Count one is now " << count_one << '\n';
+        }
+        return;
+    }
+    if (root->name == target_two) {
+        count_two++;
+        if (count_two % 1000 == 0) {
+            std::cout << "Count two is now " << count_two << '\n';
+        }
+        return;
+    }
+
+    // Traverse the cables
+    for (int c = 0; c < root->cables.size(); c++) {
+        dfs(root->cables[c], target_one, target_two, count_one, count_two);
+    }
+}
 
 // Two target with cycle detection
 void dfs(Node* root, std::vector<std::string>& seen, std::string target_one, std::string target_two, int &count_one, int &count_two) {
@@ -213,22 +234,19 @@ int main() {
 
         // Find number of paths
         Node* svr = nodes.at("svr");
-        std::vector<std::string> svr_seen;
         int svr_dac = 0;
         int svr_fft = 0;
-        dfs(svr, svr_seen, "dac", "fft", svr_dac, svr_fft);
+        dfs(svr, "dac", "fft", svr_dac, svr_fft);
 
         Node* dac = nodes.at("dac");
-        std::vector<std::string> dac_seen;
         int dac_fft = 0;
         int dac_out = 0;
-        dfs(dac, dac_seen, "fft", "out", dac_fft, dac_out);
+        dfs(dac, "fft", "out", dac_fft, dac_out);
 
-        std::vector<std::string> fft_seen;
         Node* fft = nodes.at("fft");
         int fft_dac = 0;
         int fft_out = 0;
-        dfs(fft, fft_seen, "dac", "out", fft_dac, fft_out);
+        dfs(fft, "dac", "out", fft_dac, fft_out);
 
         std::cout << "Number of paths svr dac: " << svr_dac << " | ";
         std::cout << "svr fft: " << svr_fft << " | ";
