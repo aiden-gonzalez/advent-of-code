@@ -27,11 +27,13 @@ class Node {
     public:
         Node (std::string nm) {
             name = nm;
+            paths_to_target = 0;
         }
 
         std::string name;
         std::vector<Node*> cables_out;
         std::vector<Node*> cables_in;
+        int paths_to_target;
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Node & n);
@@ -213,7 +215,7 @@ int main() {
     std::unordered_map<std::string, Node*> nodes;
 
     // Open input file
-    input_file.open("example_input_2.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -319,35 +321,19 @@ int main() {
         // Print out topologically sorted nodes for check
         print_nodes(nodes_sorted);
         std::cout << '\n';
-
+        
         // Find number of paths
-        Node* svr = nodes.at("svr");
-        int svr_dac = 0;
-        int svr_fft = 0;
-        dfs(svr, "dac", "fft", svr_dac, svr_fft);
+        nodes_sorted[nodes_sorted.size() - 1]->paths_to_target = 1;
+        for (int i = nodes_sorted.size() - 2; i >= 0; i--) {
+            // Number of paths to target is the sum of the paths for all its descendants
+            int sum = 0;
+            for (const auto& n : nodes_sorted[i]->cables_out) {
+                sum += n->paths_to_target;
+            }
+            nodes_sorted[i]->paths_to_target = sum;
+        }
 
-        Node* dac = nodes.at("dac");
-        int dac_fft = 0;
-        int dac_out = 0;
-        dfs(dac, "fft", "out", dac_fft, dac_out);
-
-        Node* fft = nodes.at("fft");
-        int fft_dac = 0;
-        int fft_out = 0;
-        dfs(fft, "dac", "out", fft_dac, fft_out);
-
-        std::cout << "Number of paths svr dac: " << svr_dac << " | ";
-        std::cout << "svr fft: " << svr_fft << " | ";
-        std::cout << "dac fft: " << dac_fft << " | ";
-        std::cout << "fft dac: " << fft_dac << " | ";
-        std::cout << "dac out: " << dac_out << " | ";
-        std::cout << "fft out: " << fft_out << '\n';
-
-        long p1 = ((long)svr_dac * (long)dac_fft * (long)fft_out);
-        long p2 = ((long)svr_fft * (long)fft_dac * (long)dac_out);
-        long paths = p1 + p2;
-
-        std::cout << "ANSWER: " << paths << " paths\n";
+        std::cout << "ANSWER: " << nodes_sorted[0]->paths_to_target << " paths\n";
 
         // Free all created nodes
         for (const auto& node : nodes) {
