@@ -38,15 +38,16 @@ class Node {
 };
 
 std::ostream & operator<<(std::ostream & os, Node const & n) {
-    os << n.name << ':';
+    if (n.cables_in.size() > 0) {
+        for (int i = 0; i < n.cables_in.size(); i++) {
+            os << n.cables_in[i]->name << ' ';
+        }
+        os << "-> ";
+    } 
+    os << "[" << n.name << "] ->";
     for (int i = 0; i < n.cables_out.size(); i++) {
         os << ' ' << n.cables_out[i]->name;
     }
-    os << " (";
-    for (int i = 0; i < n.cables_in.size(); i++) {
-        os << ' ' << n.cables_in[i]->name;
-    }
-    os << " )";
     return os;
 }
 
@@ -241,6 +242,14 @@ int main() {
                     node_end = line.size() - 1;
                 }
             } while (node_start < line.size());
+        }
+
+        // Now set up "cables_in" pointers
+        for (const auto& node : nodes) {
+            // For every node this node points to, add this node to that node's "cables_in"
+            for (const auto& out_node : node.second->cables_out) {
+                out_node->cables_in.push_back(node.second);
+            }
         }
 
         // Print out nodes for check
