@@ -281,15 +281,6 @@ int main() {
             }
         }
 
-        // Print out nodes for check
-        std::cout << "Read all nodes:\n";
-        for (const auto& node : nodes) {
-            if (node.first != "out") {
-                std::cout << *node.second << '\n';
-            }
-        }
-        std::cout << '\n';
-
         // Do topological sort of nodes
         std::vector<Node*> nodes_sorted;
         std::unordered_set<Node*> zero_in_nodes;
