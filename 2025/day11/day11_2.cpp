@@ -33,7 +33,7 @@ class Node {
         std::string name;
         std::vector<Node*> cables_out;
         std::vector<Node*> cables_in;
-        int paths_to_target;
+        long paths_to_target;
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Node & n);
@@ -208,6 +208,25 @@ void dfs(Node* root, std::string start, std::string target, int &count, bool dac
     }
 }
 
+long num_paths(std::vector<Node*> nodes_sorted, int ind_start, int ind_target) {
+    nodes_sorted[ind_target]->paths_to_target = 1;
+    for (int i = ind_target - 1; i >= ind_start; i--) {
+        // Number of paths to target is the sum of the paths for all its descendants
+        long sum = 0;
+        for (const auto& n : nodes_sorted[i]->cables_out) {
+            sum += n->paths_to_target;
+        }
+        nodes_sorted[i]->paths_to_target = sum;
+    }
+    return nodes_sorted[ind_start]->paths_to_target;
+}
+
+void reset_all_path_nums(std::vector<Node*> nodes) {
+    for (int i = 0; i < nodes.size(); i++) {
+        nodes[i]->paths_to_target = 0;
+    }
+}
+
 int main() {
     std::string line;
     std::ifstream input_file;
@@ -318,22 +337,32 @@ int main() {
             }
         }
 
-        // Print out topologically sorted nodes for check
-        print_nodes(nodes_sorted);
-        std::cout << '\n';
-        
-        // Find number of paths
-        nodes_sorted[nodes_sorted.size() - 1]->paths_to_target = 1;
-        for (int i = nodes_sorted.size() - 2; i >= 0; i--) {
-            // Number of paths to target is the sum of the paths for all its descendants
-            int sum = 0;
-            for (const auto& n : nodes_sorted[i]->cables_out) {
-                sum += n->paths_to_target;
+        // Find indexes of dac and fft
+        int ind_fft = -1;
+        int ind_dac = -1;
+        for (int i = 0; i < nodes_sorted.size(); i++) {
+            if (nodes_sorted[i]->name == "fft") {
+                ind_fft = i;
+            } else if (nodes_sorted[i]->name == "dac") {
+                ind_dac = i;
             }
-            nodes_sorted[i]->paths_to_target = sum;
         }
 
-        std::cout << "ANSWER: " << nodes_sorted[0]->paths_to_target << " paths\n";
+        // Find number of paths from dac to out
+        long dac_to_out = num_paths(nodes_sorted, ind_dac, nodes_sorted.size() - 1);
+        std::cout << "dac_to_out: " << dac_to_out << '\n';
+        reset_all_path_nums(nodes_sorted);
+        // Then find number of paths from fft to dac
+        long fft_to_dac = num_paths(nodes_sorted, ind_fft, ind_dac);
+        std::cout << "fft_to_dac: " << fft_to_dac << '\n';
+        reset_all_path_nums(nodes_sorted);
+        // Find number of paths from svr to fft
+        long svr_to_fft = num_paths(nodes_sorted, 0, ind_fft);
+        std::cout << "svr_to_fft: " << svr_to_fft << '\n';
+
+        long answer = dac_to_out * fft_to_dac * svr_to_fft;
+        
+        std::cout << "ANSWER: " << answer << " paths\n";
 
         // Free all created nodes
         for (const auto& node : nodes) {
