@@ -63,6 +63,14 @@ struct std::hash<Node> {
     }
 };
 
+void print_nodes(std::vector<Node*>& nodes) {
+    std::cout << "Nodes vector:";
+    for (int i = 0; i < nodes.size(); i++) {
+        std::cout << ' ' << (*nodes[i]).name << ",";
+    }
+    std::cout << '\n';
+}
+
 void print_path(std::vector<std::string>& path, std::string last_node = "") {
     std::cout << path[0];
     for (int p = 1; p < path.size(); p++) {
@@ -222,7 +230,7 @@ int main() {
         // Also add "out" node
         nodes["out"] = new Node("out");
 
-        // Now read in cable connections
+        // Read in cable connections
         while (getline(input_file, line)) {
             Node* root = nodes.at(line.substr(0, line.find(':')));
             int node_start = line.find(' ') + 1;
@@ -244,7 +252,7 @@ int main() {
             } while (node_start < line.size());
         }
 
-        // Now set up "cables_in" pointers
+        // Set up "cables_in" pointers
         for (const auto& node : nodes) {
             // For every node this node points to, add this node to that node's "cables_in"
             for (const auto& out_node : node.second->cables_out) {
@@ -253,11 +261,64 @@ int main() {
         }
 
         // Print out nodes for check
+        std::cout << "Read all nodes:\n";
         for (const auto& node : nodes) {
             if (node.first != "out") {
                 std::cout << *node.second << '\n';
             }
         }
+        std::cout << '\n';
+
+        // Do topological sort of nodes
+        std::vector<Node*> nodes_sorted;
+        std::unordered_set<Node*> zero_in_nodes;
+        for (const auto& node : nodes) {
+            // If node has no in-cables, add to set
+            if (node.second->cables_in.size() == 0) {
+                zero_in_nodes.insert(node.second);
+            }
+        }
+        while (zero_in_nodes.size() > 0) {
+            // Remove a node from zero_in_nodes
+            Node* n = *(zero_in_nodes.begin());
+            zero_in_nodes.erase(n);
+
+            // Add node to sorted list
+            nodes_sorted.push_back(n);
+
+            // For each node pointed to by this node
+            for (const auto& out_node : n->cables_out) {
+                // Use erase-remove idiom to erase this node from "cables_in"
+                out_node->cables_in.erase(
+                    std::remove(
+                        out_node->cables_in.begin(),
+                        out_node->cables_in.end(),
+                        n
+                    ),
+                    out_node->cables_in.end()
+                );
+                // We will not actually modify cables out, since we still need it later
+                // later.  But if we didn't need it, we'd clear cables_out to completely
+                // remove the cable from the graph.
+
+                // If no other income edges for out_node, insert into zero_in_nodes
+                if (out_node->cables_in.size() == 0) {
+                    zero_in_nodes.insert(out_node);
+                }
+            }
+        }
+
+        // Cycle check:
+        for (const auto& node : nodes) {
+            if (node.second->cables_in.size() > 0) {
+                std::cout << "ERROR: Graph has at least one cycle!";
+                return 1;
+            }
+        }
+
+        // Print out topologically sorted nodes for check
+        print_nodes(nodes_sorted);
+        std::cout << '\n';
 
         // Find number of paths
         Node* svr = nodes.at("svr");
@@ -286,7 +347,7 @@ int main() {
         long p2 = ((long)svr_fft * (long)fft_dac * (long)dac_out);
         long paths = p1 + p2;
 
-        std::cout << paths << " paths\n";
+        std::cout << "ANSWER: " << paths << " paths\n";
 
         // Free all created nodes
         for (const auto& node : nodes) {
