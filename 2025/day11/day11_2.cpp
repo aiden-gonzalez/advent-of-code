@@ -9,6 +9,18 @@
     Part 2:
 
     Find all paths from svr to out that also visit dac and fft.
+
+    Turns out there are a lot of paths. Like a LOT.
+
+    We are assuming at this point that this is a DAG. All the testing we have done
+    indicates that it is, as far as we can tell.  To do this efficiently, we can
+    use Kahn's algorithm to topographically sort the graph. Then, work backwards
+    from the target to the source.
+
+    This also means we have to calculate and track what nodes point to a given node.
+    Not just what nodes a given node points to.  That's an extra step we will need
+    to do. But we can easily set that up using the map of nodes we have already
+    set up.
 */
 
 class Node {
@@ -18,7 +30,8 @@ class Node {
         }
 
         std::string name;
-        std::vector<Node*> cables;
+        std::vector<Node*> cables_out;
+        std::vector<Node*> cables_in;
 
         // Friend function: stream operator overload
         friend std::ostream & operator<<(std::ostream & os, const Node & n);
@@ -26,9 +39,14 @@ class Node {
 
 std::ostream & operator<<(std::ostream & os, Node const & n) {
     os << n.name << ':';
-    for (int i = 0; i < n.cables.size(); i++) {
-        os << ' ' << n.cables[i]->name;
+    for (int i = 0; i < n.cables_out.size(); i++) {
+        os << ' ' << n.cables_out[i]->name;
     }
+    os << " (";
+    for (int i = 0; i < n.cables_out.size(); i++) {
+        os << ' ' << n.cables_in[i]->name;
+    }
+    os << " )";
     return os;
 }
 
@@ -36,8 +54,8 @@ template<>
 struct std::hash<Node> {
     std::size_t operator()(const Node& n) const noexcept {
         std::size_t result = std::hash<std::string>()(n.name);
-        for (int i = 0; i < n.cables.size(); i++) {
-            const std::size_t hash = std::hash<std::string>()(n.cables[i]->name);
+        for (int i = 0; i < n.cables_out.size(); i++) {
+            const std::size_t hash = std::hash<std::string>()(n.cables_out[i]->name);
             result = result ^ hash << i;
         }
         return result;
@@ -66,13 +84,13 @@ void dfs(Node* root, std::string& start, std::string& target, int &count) {
     }
 
     // Traverse the cables
-    for (int c = 0; c < root->cables.size(); c++) {
+    for (int c = 0; c < root->cables_out.size(); c++) {
         // Don't go to the starting node again (avoid potential cycle)
-        if (root->cables[c]->name == start) {
+        if (root->cables_out[c]->name == start) {
             continue;
         }
 
-        dfs(root->cables[c], start, target, count);
+        dfs(root->cables_out[c], start, target, count);
     }
 }
 
@@ -95,8 +113,8 @@ void dfs(Node* root, std::string target_one, std::string target_two, int &count_
     }
 
     // Traverse the cables
-    for (int c = 0; c < root->cables.size(); c++) {
-        dfs(root->cables[c], target_one, target_two, count_one, count_two);
+    for (int c = 0; c < root->cables_out.size(); c++) {
+        dfs(root->cables_out[c], target_one, target_two, count_one, count_two);
     }
 }
 
@@ -124,14 +142,14 @@ void dfs(Node* root, std::vector<std::string>& seen, std::string target_one, std
     seen.push_back(root->name);
 
     // Traverse the cables
-    for (int c = 0; c < root->cables.size(); c++) {
+    for (int c = 0; c < root->cables_out.size(); c++) {
         // Avoid cycles
-        if (std::find(seen.begin(), seen.end(), root->cables[c]->name) != seen.end()) {
+        if (std::find(seen.begin(), seen.end(), root->cables_out[c]->name) != seen.end()) {
             std::cout << "Cycle detected! Haha\n";
             continue;
         }
 
-        dfs(root->cables[c], seen, target_one, target_two, count_one, count_two);
+        dfs(root->cables_out[c], seen, target_one, target_two, count_one, count_two);
     }
 
     // Remove this node from "seen" nodes
@@ -159,23 +177,23 @@ void dfs(Node* root, std::string start, std::string target, int &count, bool dac
     }
 
     // Traverse the cables
-    for (int c = 0; c < root->cables.size(); c++) {
+    for (int c = 0; c < root->cables_out.size(); c++) {
         // If we have already seen dac, don't visit it again (avoid cycle)
-        if (dac_seen && root->cables[c]->name == "dac") {
+        if (dac_seen && root->cables_out[c]->name == "dac") {
             continue;
         }
 
         // If we have already seen fft, don't visit it again (avoid cycle)
-        if (fft_seen && root->cables[c]->name == "fft") {
+        if (fft_seen && root->cables_out[c]->name == "fft") {
             continue;
         }
 
         // Don't go to the starting node again (avoid potential cycle)
-        if (root->cables[c]->name == start) {
+        if (root->cables_out[c]->name == start) {
             continue;
         }
 
-        dfs(root->cables[c], start, target, count, dac_seen, fft_seen);
+        dfs(root->cables_out[c], start, target, count, dac_seen, fft_seen);
     }
 }
 
@@ -214,7 +232,7 @@ int main() {
             do {
                 // Grab node name and add the address of that node to cable connections
                 std::string node_name = line.substr(node_start, node_end - node_start + 1);
-                root->cables.push_back(nodes.at(node_name));
+                root->cables_out.push_back(nodes.at(node_name));
 
                 // Identify next node
                 node_start = node_end + 2;
