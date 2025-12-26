@@ -43,7 +43,7 @@ std::ostream & operator<<(std::ostream & os, Node const & n) {
         os << ' ' << n.cables_out[i]->name;
     }
     os << " (";
-    for (int i = 0; i < n.cables_out.size(); i++) {
+    for (int i = 0; i < n.cables_in.size(); i++) {
         os << ' ' << n.cables_in[i]->name;
     }
     os << " )";
@@ -204,7 +204,7 @@ int main() {
     std::unordered_map<std::string, Node*> nodes;
 
     // Open input file
-    input_file.open("input.txt");
+    input_file.open("example_input_2.txt");
 
     if (input_file.is_open()) {
         // Read line by line
