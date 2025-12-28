@@ -60,79 +60,6 @@ ___________________________________________
 // Alias for shape_grid
 using ShapeGrid = std::vector<std::vector<bool>>;
 
-std::vector<ShapeGrid> generate_orientations(ShapeGrid g) {
-    // TODO simplify this with helper function
-    std::vector<ShapeGrid> orientations;
-
-    // Original
-    orientations.push_back(g);
-
-    // Flip vertical
-    ShapeGrid g1 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g1[g.size()-1-i][j] = g[i][j];
-        }
-    }
-    orientations.push_back(g1);
-
-    // Flip horizontal
-    ShapeGrid g2 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g2[i][g[i].size()-1-j] = g1[i][j];
-        }
-    }
-    orientations.push_back(g2);
-
-    // Flip vertical
-    ShapeGrid g3 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g3[g[i].size()-1-i][j] = g2[i][j];
-        }
-    }
-    orientations.push_back(g3);
-
-    // Rotate 90 ccw
-    ShapeGrid g4 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g4[j][i] = g3[i][j];
-        }
-    }
-    orientations.push_back(g4);
-
-    // Flip vertical
-    ShapeGrid g5 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g5[g[i].size()-1-i][j] = g4[i][j];
-        }
-    }
-    orientations.push_back(g5);
-
-    // Flip horizontal
-    ShapeGrid g6 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g6[i][g[i].size()-1-j] = g5[i][j];
-        }
-    }
-    orientations.push_back(g6);
-
-    // Flip vertical
-    ShapeGrid g7 = g;
-    for (int i = 0; i < g.size(); i++) {
-        for (int j = 0; j < g[i].size(); j++) {
-            g7[g[i].size()-1-i][j] = g6[i][j];
-        }
-    }
-    orientations.push_back(g7);
-
-    return orientations;
-}
-
 class Shape {
     public:
         Shape(int i, ShapeGrid sg) {
@@ -144,6 +71,57 @@ class Shape {
         int id;
         ShapeGrid grid;
         std::vector<ShapeGrid> orientations;
+
+    private:
+        ShapeGrid generate_orientations_helper(ShapeGrid &orig, const char flip) {
+            ShapeGrid new_grid = orig;
+            for (int i = 0; i < orig.size(); i++) {
+                for (int j = 0; j < orig[i].size(); j++) {
+                    if (flip == 'v') {
+                        // Flip vertically
+                        new_grid[orig.size() - 1 - i][j] = orig[i][j];
+                    } else if (flip == 'h') {
+                        // Flip horizontally
+                        new_grid[i][orig[i].size() - 1 - j] = orig[i][j];
+                    } else if (flip == 'r') {
+                        // Rotate 90 degrees CCW
+                        new_grid[j][i] = orig[i][j];
+                    }
+                }
+            }
+
+            return new_grid;
+        }
+        
+        std::vector<ShapeGrid> generate_orientations(ShapeGrid g) {
+            std::vector<ShapeGrid> orientations;
+
+            // Original
+            orientations.push_back(g);
+
+            // Flip vertical
+            orientations.push_back(generate_orientations_helper(g, 'v'));
+
+            // Flip horizontal
+            orientations.push_back(generate_orientations_helper(g, 'h'));
+
+            // Flip vertical
+            orientations.push_back(generate_orientations_helper(g, 'v'));
+
+            // Rotate 90 ccw
+            orientations.push_back(generate_orientations_helper(g, 'r'));
+
+            // Flip vertical
+            orientations.push_back(generate_orientations_helper(g, 'v'));
+
+            // Flip horizontal
+            orientations.push_back(generate_orientations_helper(g, 'h'));
+
+            // Flip vertical
+            orientations.push_back(generate_orientations_helper(g, 'v'));
+
+            return orientations;
+        }
 };
 
 class Region {
