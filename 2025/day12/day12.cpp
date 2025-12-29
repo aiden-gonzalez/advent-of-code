@@ -215,13 +215,14 @@ int main() {
     std::string line;
     std::ifstream input_file;
 
+    std::vector<Shape> shapes;
+    std::vector<Region> regions;
+
     // Open input file
     input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
-        std::vector<Shape> shapes;
-        std::vector<Region> regions;
         while (getline(input_file, line)) {
             int colon = line.find(':'); 
             int idx;
@@ -230,7 +231,7 @@ int main() {
             }
 
             // Read present shape
-            std::vector<std::vector<bool>> shape(3, std::vector<bool>(3,0));
+            ShapeGrid shape(3, std::vector<bool>(3,0));
             int taken = line.find('#');
             int empty = line.find('.');
             int i = 0;
