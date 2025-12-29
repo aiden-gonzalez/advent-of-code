@@ -136,7 +136,7 @@ class Region {
         int height;
         int width;
         std::vector<int> shape_counts;
-        std::vector<std::vector<bool>> grid;
+        ShapeGrid grid;
 };
 
 // Print a shape grid with # for true and . for false
@@ -163,10 +163,13 @@ bool place_present(Region region, ShapeGrid sg, int row, int col) {
     for (int r = 0; r < sg.size(); r++) {
         for (int c = 0; c < sg[r].size(); c++) {
             if (region.grid[row][col]) {
+                // Space already occupied, return false
                 std::cout << row << " r | c " << col << " FALSE\n";
-            } else {
-                std::cout << row << " r | c " << col << " TRUE\n";
+                return false;
             }
+            
+            // Set space to true since it's not already occupied
+            std::cout << row << " r | c " << col << " TRUE\n";
             region.grid[row][col] = sg[r][c];
         }
     }
