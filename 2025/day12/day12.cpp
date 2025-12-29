@@ -100,25 +100,25 @@ class Shape {
             orientations.push_back(g);
 
             // Flip vertical
-            orientations.push_back(generate_orientations_helper(g, 'v'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
 
             // Flip horizontal
-            orientations.push_back(generate_orientations_helper(g, 'h'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
 
             // Flip vertical
-            orientations.push_back(generate_orientations_helper(g, 'v'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
 
             // Rotate 90 ccw
-            orientations.push_back(generate_orientations_helper(g, 'r'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'r'));
 
             // Flip vertical
-            orientations.push_back(generate_orientations_helper(g, 'v'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
 
             // Flip horizontal
-            orientations.push_back(generate_orientations_helper(g, 'h'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
 
             // Flip vertical
-            orientations.push_back(generate_orientations_helper(g, 'v'));
+            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
 
             return orientations;
         }
