@@ -96,47 +96,18 @@ class Shape {
         std::vector<ShapeGrid> generate_orientations(ShapeGrid g) {
             std::vector<ShapeGrid> orientations;
 
-            // Original
+            // Start with original then start flipping and rotating to create others
             orientations.push_back(g);
-
-            // Flip vertical
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-
-            // Flip horizontal
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
-
-            // Flip vertical
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-
-            // Rotate 90 ccw
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'r'));
-
-            // Flip vertical
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-
-            // Flip horizontal
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
-
-            // Flip vertical
             orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
 
             return orientations;
         }
-};
-
-class Region {
-    public:
-        Region(int h, int w, std::vector<int> sc) {
-            height = h;
-            width = w;
-            shape_counts = sc;
-            grid = ShapeGrid(h, std::vector<bool>(w,0));
-        }
-
-        int height;
-        int width;
-        std::vector<int> shape_counts;
-        ShapeGrid grid;
 };
 
 // Print a shape grid with # for true and . for false
@@ -153,13 +124,31 @@ void print_shape(ShapeGrid sg) {
     }
 }
 
-// Put a present in a part of the grid starting from row and col on the grid
-bool place_present(Region region, ShapeGrid sg, int row, int col) {
+class Region {
+    public:
+        Region(int h, int w, std::vector<int> sc) {
+            height = h;
+            width = w;
+            shape_counts = sc;
+            grid = ShapeGrid(h, std::vector<bool>(w,0));
+        }
+
+        int height;
+        int width;
+        std::vector<int> shape_counts;
+        ShapeGrid grid;
+};
+
+// PLACEMENT FUNCTIONS
+
+// Check if a present could be placed in a given spot on a grid
+bool check_placement(Region region, ShapeGrid sg, int row, int col) {
     // Check if the present would go outside the region grid
     if (row + sg.size() >= region.grid.size() || col + sg[0].size() >= region.grid[0].size()) {
         return false;
     }
 
+    // Now check if any spot is already occupied
     for (int r = 0; r < sg.size(); r++) {
         for (int c = 0; c < sg[r].size(); c++) {
             if (region.grid[row][col]) {
@@ -167,15 +156,38 @@ bool place_present(Region region, ShapeGrid sg, int row, int col) {
                 std::cout << row << " r | c " << col << " FALSE\n";
                 return false;
             }
-            
-            // Set space to true since it's not already occupied
-            std::cout << row << " r | c " << col << " TRUE\n";
-            region.grid[row][col] = sg[r][c];
         }
     }
 
+    // Yes, you could place a present here
     return true;
 }
+
+// Place present on grid at specified location
+void place_present(Region region, ShapeGrid sg, int row, int col) {
+    for (int r = 0; r < sg.size(); r++) {
+        for (int c = 0; c < sg[r].size(); c++) {
+            if (sg[r][c]) {
+                region.grid[row][col] = sg[r][c];
+            }
+        }
+    }
+}
+
+// Put a present in a part of the grid starting from row and col on the grid
+bool check_and_place_present(Region region, ShapeGrid sg, int row, int col) {
+    // Check if the present can be placed here
+    bool can_be_placed = check_placement(region, sg, row, col);
+    if (!can_be_placed) {
+        return can_be_placed;
+    }
+
+    // It can be placed here, so place it and return true
+    place_present(region, sg, row, col);
+    return true;
+}
+
+// SOLVING FUNCTIONS
 
 // Solve for if the region can fit the shapes needed
 int fit_region(Region region, std::vector<Shape> shapes) {
@@ -210,6 +222,8 @@ int fit_region(Region region, std::vector<Shape> shapes) {
     // Figure out if any combination of one orientation per shape needed can be fit
     return 0;
 }
+
+// DRIVER CODE
 
 int main() {
     std::string line;
