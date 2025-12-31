@@ -237,55 +237,60 @@ int main() {
 
     if (input_file.is_open()) {
         // Read line by line
+        int index = -1;
+        ShapeGrid grid;
         while (getline(input_file, line)) {
-            int colon = line.find(':'); 
-            int idx;
-            if (colon != std::string::npos) {
-                idx = std::stoi(line.substr(0,colon));
-            }
+            // If this is a region
+            if (line.find('x') != std::string::npos) {
+                // Read region shape
+                int x_ind = line.find('x');
+                int colon_ind = line.find(':');
+                int width = std::stoi(line.substr(0, x_ind));
+                int height = std::stoi(line.substr(x_ind + 1, colon_ind - x_ind - 1));
 
-            // Read present shape
-            ShapeGrid shape(3, std::vector<bool>(3,0));
-            int taken = line.find('#');
-            int empty = line.find('.');
-            int i = 0;
-            // Find the lines relating to the present shape
-            if (taken != std::string::npos || empty != std::string::npos) {
-                while (taken != std::string::npos || empty != std::string::npos) {
-                    std::string ln = line.substr(0, line.size());
-                    for (int j = 0; j < ln.size(); j++) {
-                        if (ln[j] == '#') {
-                            shape[i][j]=(true);
-                        } else if (ln[j] == '.') {
-                            shape[i][j]=(false);
-                        }
+                // Read the number of each present desired for the region
+                std::vector<int> shape_quantity;
+                int current_space = colon_ind + 1;
+                int next_space = line.find(' ', current_space + 1);
+                while (current_space != std::string::npos && current_space < line.size()) {
+                    if (next_space == std::string::npos) {
+                        next_space = line.size();
                     }
-                    i++;
-                    getline(input_file, line);
-                    taken = line.find('#');
-                    empty = line.find('.');
+                    shape_quantity.push_back(std::stoi(line.substr(current_space + 1, next_space - current_space - 1)));
+                    current_space = next_space;
+                    next_space = line.find(' ', current_space + 1);
                 }
-                shapes.push_back(Shape(idx,shape));
+                regions.push_back(Region(height, width, shape_quantity));
                 continue;
             }
 
-            // Read region shape
-            int row;
-            int col;
-            std::vector<int> shape_quantity;
-            int x = line.find('x');
-            if (x != std::string::npos) {
-                row = std::stoi(line.substr(0,x));
-                col = std::stoi(line.substr(x + 1,colon));
-                int last_space = 0;
-                int current_space = line.find(' ',last_space);
-                // Read the number of each present desired for the region
-                while (current_space != std::string::npos && current_space < line.size()) {
-                    last_space = current_space + 1;
-                    shape_quantity.push_back(std::stoi(line.substr(last_space, 1)));
-                    current_space = line.find(' ',last_space);
+            // If starting a new shape
+            if (index == -1) {
+                index = std::stoi(line.substr(0, line.find(':')));
+                continue;
+            }
+            
+            // If this is the end of a shape
+            if (line == "") {
+                shapes.push_back(Shape(index, grid));
+                index = -1;
+                grid.clear();
+                continue;
+            }
+
+            // If this is a shape line
+            int pound_ind = line.find('#');
+            if (pound_ind != std::string::npos) {
+                std::vector<bool> grid_row;
+                for (int i = 0; i < line.size(); i++) {
+                    if (line[i] == '#') {
+                        grid_row.push_back(true);
+                    } else if (line[i] == '.') {
+                        grid_row.push_back(false);
+                    }
                 }
-                regions.push_back(Region(row,col,shape_quantity));
+                grid.push_back(grid_row);
+                continue;
             }
         }
 
@@ -293,6 +298,7 @@ int main() {
         for (Shape s : shapes) {
             std::cout << "Shape Index: " << s.id << "\n";
             print_shape(s.grid);
+            std::cout << '\n';
         }
         for (Region r : regions) {
             std::cout << "Rows: " << r.height << " Cols: " << r.width << " Present Counts: ";
@@ -301,13 +307,14 @@ int main() {
             }
             std::cout << "\n";
             print_shape(r.grid);
+            std::cout << '\n';
         }
 
         std::cout << "Find Solution:\n";
         // Fit presents into region and sum up the number of regions for which all presents fit
         int sum = 0;
         for (Region r : regions) {
-            sum += fit_region(r,shapes);
+            //sum += fit_region(r,shapes);
             return 0;
         }
 
