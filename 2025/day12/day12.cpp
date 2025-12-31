@@ -292,10 +292,7 @@ int main() {
         // Print what was read
         for (Shape s : shapes) {
             std::cout << "Shape Index: " << s.id << "\n";
-            for (int i = 0; i < s.orientations.size(); i++) {
-                std::cout << "Orientation " << i << "\n";
-                print_shape(s.orientations[i]);
-            }
+            print_shape(s.grid);
         }
         for (Region r : regions) {
             std::cout << "Rows: " << r.height << " Cols: " << r.width << " Present Counts: ";
