@@ -127,9 +127,16 @@ class Shape {
             orientations.push_back(g);
             std::vector<char> rotations = { 'v', 'h', 'v', 'r', 'v', 'h', 'v' };
             for (const char &r : rotations) {
-                // For each new orientation, test to see if it's a copy of the last one (due to symmetry)
+                // For each new orientation, test to see if it's a duplicate (due to symmetry)
                 ShapeGrid o = generate_orientations_helper(orientations.back(), r);
-                if (!grids_match(orientations.back(), o)) {
+                bool new_orientation = true;
+                for (ShapeGrid grid : orientations) {
+                    if (grids_match(grid, o)) {
+                        new_orientation = false;
+                        break;
+                    }
+                }
+                if (new_orientation) {
                     orientations.push_back(o);
                 }
             }
@@ -270,7 +277,7 @@ int main() {
     std::vector<Region> regions;
 
     // Open input file
-    input_file.open("input.txt");
+    input_file.open("example_input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -334,7 +341,10 @@ int main() {
         // Print what was read
         for (Shape s : shapes) {
             std::cout << "Shape Index: " << s.id << "\n";
-            print_shape(s.grid);
+            for (int i = 0; i < s.orientations.size(); i++) {
+                print_shape(s.orientations[i]);
+                std::cout << '\n';
+            }
             std::cout << '\n';
         }
         for (Region r : regions) {
