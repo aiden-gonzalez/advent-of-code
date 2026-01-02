@@ -64,15 +64,29 @@ class Shape {
     public:
         Shape(int i, ShapeGrid sg) {
             id = i;
+            area = calculate_area(sg);
             grid = sg;
             orientations = generate_orientations(sg);
         }
 
         int id;
+        int area;
         ShapeGrid grid;
         std::vector<ShapeGrid> orientations;
 
     private:
+        int calculate_area(ShapeGrid &sg) {
+            int a = 0;
+            for (int i = 0; i < sg.size(); i++) {
+                for (int j = 0; j < sg[i].size(); j++) {
+                    if (sg[i][j]) {
+                        a++;
+                    }
+                }
+            }
+            return a;
+        }
+
         ShapeGrid generate_orientations_helper(ShapeGrid &orig, const char flip) {
             ShapeGrid new_grid = orig;
             for (int i = 0; i < orig.size(); i++) {
@@ -92,20 +106,34 @@ class Shape {
 
             return new_grid;
         }
+
+        bool grids_match(ShapeGrid &a, ShapeGrid &b) {
+            if (a.size() != b.size()) { return false; }
+
+            for (int i = 0; i < a.size(); i++) {
+                if (a[i].size() != b[i].size()) { return false; }
+                for (int j = 0; j < a[i].size(); j++) {
+                    if (a[i][j] != b[i][j]) { return false; }
+                }
+            }
+
+            return true;
+        }
         
         std::vector<ShapeGrid> generate_orientations(ShapeGrid g) {
             std::vector<ShapeGrid> orientations;
 
             // Start with original then start flipping and rotating to create others
             orientations.push_back(g);
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'r'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'h'));
-            orientations.push_back(generate_orientations_helper(orientations[orientations.size() - 1], 'v'));
-
+            std::vector<char> rotations = { 'v', 'h', 'v', 'r', 'v', 'h', 'v' };
+            for (const char &r : rotations) {
+                // For each new orientation, test to see if it's a copy of the last one (due to symmetry)
+                ShapeGrid o = generate_orientations_helper(orientations.back(), r);
+                if (!grids_match(orientations.back(), o)) {
+                    orientations.push_back(o);
+                }
+            }
+            
             return orientations;
         }
 };
@@ -129,12 +157,14 @@ class Region {
         Region(int h, int w, std::vector<int> sc) {
             height = h;
             width = w;
+            area = h * w;
             shape_counts = sc;
             grid = ShapeGrid(h, std::vector<bool>(w,0));
         }
 
         int height;
         int width;
+        int area;
         std::vector<int> shape_counts;
         ShapeGrid grid;
 };
@@ -190,7 +220,16 @@ bool check_and_place_present(Region region, ShapeGrid sg, int row, int col) {
 // SOLVING FUNCTIONS
 
 // Solve for if the region can fit the shapes needed
-int fit_region(Region region, std::vector<Shape> shapes) {
+bool fit_region(Region region, std::vector<Shape> shapes) {
+    // First check if shape areas exceed region area
+    int total_shapes_area = 0;
+    for (int sid = 0; sid < region.shape_counts.size(); sid++) {
+        total_shapes_area += region.shape_counts[sid] * shapes[sid].area;
+    }
+    if (total_shapes_area > region.area) {
+        return false;
+    }
+
     // In this region, find out which shapes and how many need to fit
     for (int i = 0; i < region.shape_counts.size(); i++) {
         std::cout << "i:" << i << " ";
@@ -212,15 +251,13 @@ int fit_region(Region region, std::vector<Shape> shapes) {
                 // Try placing the present for every orientation of that shape
                 for (int j = 0; j < s.orientations.size(); j++) {
                     ShapeGrid sg = s.orientations[j];
-                    print_shape(s.orientations[j]);
                     place_present(region, s.orientations[j], row, col);
                 }
             }
         }
     }
-    print_shape(region.grid);
     // Figure out if any combination of one orientation per shape needed can be fit
-    return 0;
+    return false;
 }
 
 // DRIVER CODE
@@ -233,7 +270,7 @@ int main() {
     std::vector<Region> regions;
 
     // Open input file
-    input_file.open("example_input.txt");
+    input_file.open("input.txt");
 
     if (input_file.is_open()) {
         // Read line by line
@@ -313,9 +350,10 @@ int main() {
         std::cout << "Find Solution:\n";
         // Fit presents into region and sum up the number of regions for which all presents fit
         int sum = 0;
-        for (Region r : regions) {
-            //sum += fit_region(r,shapes);
-            return 0;
+        for (const Region r : regions) {
+            if (fit_region(r, shapes)) {
+                sum++;
+            }
         }
 
         std::cout << "\nTOTAL: " << sum << " Regions Fit \n";
@@ -325,8 +363,6 @@ int main() {
         std::cout << "Unable to open file";
         return 1;
     }
-
-    std::cout << '\n';
 
     return 0;
 }
